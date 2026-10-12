@@ -14,9 +14,7 @@ class NombrePersona implements ValidationRule
     /**
      * @param  string  $mensaje  texto de error a usar si el valor no cumple el formato
      */
-    public function __construct(private string $mensaje = 'El nombre solo debe contener letras, espacios y puntos (ej. J. Jesus)')
-    {
-    }
+    public function __construct(private string $mensaje = 'El nombre solo debe contener letras, espacios y puntos (ej. J. Jesus)') {}
 
     /**
      * Revisa el valor recibido y llama a $fail() si no cumple el formato esperado.

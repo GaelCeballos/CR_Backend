@@ -26,7 +26,7 @@ return new class extends Migration
             $table->rawColumn('ta_sistolica', 'numeric')->nullable();
             $table->rawColumn('ta_diastolica', 'numeric')->nullable();
             $table->text('ta_conjunta')->nullable()->storedAs(
-                "case when ta_sistolica is not null and ta_diastolica is not null " .
+                'case when ta_sistolica is not null and ta_diastolica is not null '.
                 "then ta_sistolica::text || '/' || ta_diastolica::text end"
             );
             $table->string('clasificacion_aha')->nullable();

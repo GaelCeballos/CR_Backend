@@ -10,6 +10,7 @@ use App\Http\Resources\ExpedienteResource;
 use App\Models\HistoriaClinica;
 use App\Services\AuditoriaService;
 use App\Services\ExpedienteBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -23,15 +24,14 @@ class ExpedienteController extends Controller
     public function __construct(
         private ExpedienteBuilder $builder,
         private AuditoriaService $bitacora,
-    ) {
-    }
+    ) {}
 
     /**
      * Get: da el folio que se asignaria si se creara un expediente ahora
      * mismo. Es solo informativo: el folio real lo asigna la base de datos
      * al insertar.
      *
-     * @return \Illuminate\Http\JsonResponse el siguiente folio disponible
+     * @return JsonResponse el siguiente folio disponible
      */
     public function siguienteFolio()
     {
@@ -43,7 +43,7 @@ class ExpedienteController extends Controller
      * en la bitacora.
      *
      * @param  StoreExpedienteRequest  $request  payload plano del expediente, ya validado
-     * @return \Illuminate\Http\JsonResponse el expediente recien creado (201)
+     * @return JsonResponse el expediente recien creado (201)
      */
     public function store(StoreExpedienteRequest $request)
     {
@@ -60,7 +60,7 @@ class ExpedienteController extends Controller
      * Get: lista expedientes para el navegador, con busqueda y filtros.
      *
      * @param  Request  $request  q, desde, hasta, tipo, page, page_size
-     * @return \Illuminate\Http\JsonResponse pagina de expedientes resumidos
+     * @return JsonResponse pagina de expedientes resumidos
      */
     public function index(Request $request)
     {
@@ -119,7 +119,7 @@ class ExpedienteController extends Controller
     /**
      * Get: tarjetas de metricas del navegador de expedientes.
      *
-     * @return \Illuminate\Http\JsonResponse conteos totales, de los ultimos 7 dias, de hoy y por tipo de examen
+     * @return JsonResponse conteos totales, de los ultimos 7 dias, de hoy y por tipo de examen
      */
     public function estadisticas()
     {
@@ -150,7 +150,7 @@ class ExpedienteController extends Controller
      * Get: abre un expediente completo y registra "Consulta" en la bitacora.
      *
      * @param  HistoriaClinica  $historia  expediente a consultar (enlazado por folio)
-     * @return \Illuminate\Http\JsonResponse el expediente completo
+     * @return JsonResponse el expediente completo
      */
     public function show(Request $request, HistoriaClinica $historia)
     {
@@ -167,7 +167,7 @@ class ExpedienteController extends Controller
      *
      * @param  UpdateExpedienteRequest  $request  payload plano del expediente, ya validado
      * @param  HistoriaClinica  $historia  expediente a editar (enlazado por folio)
-     * @return \Illuminate\Http\JsonResponse el expediente actualizado
+     * @return JsonResponse el expediente actualizado
      */
     public function update(UpdateExpedienteRequest $request, HistoriaClinica $historia)
     {
@@ -186,7 +186,7 @@ class ExpedienteController extends Controller
      *
      * @param  Request  $request  debe traer ?plantilla=PECO|TX
      * @param  HistoriaClinica  $historia  expediente a exportar (enlazado por folio)
-     * @return \Illuminate\Http\JsonResponse el expediente completo mas la plantilla solicitada
+     * @return JsonResponse el expediente completo mas la plantilla solicitada
      */
     public function datosParaPdf(Request $request, HistoriaClinica $historia)
     {

@@ -49,7 +49,7 @@ final class CamposExpediente
 
     /**
      * @return array<int, string> columnas de hc_exploracion que acepta el cliente
-     *                             (no incluye ta_conjunta/imc/estado_nutricional: los calcula Postgres)
+     *                            (no incluye ta_conjunta/imc/estado_nutricional: los calcula Postgres)
      */
     public static function exploracion(): array
     {

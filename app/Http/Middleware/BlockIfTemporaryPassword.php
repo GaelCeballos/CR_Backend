@@ -25,7 +25,7 @@ class BlockIfTemporaryPassword
         $usuario = $request->user();
 
         if ($usuario && $usuario->is_temporary_password) {
-            throw new TemporaryPasswordException();
+            throw new TemporaryPasswordException;
         }
 
         return $next($request);

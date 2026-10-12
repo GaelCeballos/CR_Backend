@@ -12,9 +12,7 @@ use Illuminate\Validation\ValidationException;
  */
 class PacienteUpsertService
 {
-    public function __construct(private CalculoClinicoService $calculos)
-    {
-    }
+    public function __construct(private CalculoClinicoService $calculos) {}
 
     /**
      * Busca un paciente existente por CURP o NSS normalizados; si no existe,

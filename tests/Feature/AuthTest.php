@@ -16,6 +16,17 @@ class AuthTest extends TestCase
     use RefreshDatabase;
 
     /**
+     * El limitador de intentos de login usa la cache, que RefreshDatabase no
+     * reinicia: si no se limpia, un test puede heredar los intentos de otro.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app['cache']->getStore()->flush();
+    }
+
+    /**
      * Si falta el correo o la contraseña, debe responder el mensaje combinado.
      */
     public function test_login_sin_correo_o_contrasena(): void

@@ -31,9 +31,9 @@ class UpdateMeRequest extends FormRequest
         $esMedico = $this->user()->rol === RolUsuario::ServiciosMedicos;
 
         return [
-            'nombre_completo' => ['required', 'string', new NombrePersona()],
+            'nombre_completo' => ['required', 'string', new NombrePersona],
             'email' => ['required', 'email'],
-            'cedula_profesional' => [$esMedico ? 'required' : 'nullable', 'string', new CedulaProfesional()],
+            'cedula_profesional' => [$esMedico ? 'required' : 'nullable', 'string', new CedulaProfesional],
             'universidad' => [$esMedico ? 'required' : 'nullable', 'string', 'min:2'],
         ];
     }

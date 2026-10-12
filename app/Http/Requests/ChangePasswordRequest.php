@@ -37,7 +37,7 @@ class ChangePasswordRequest extends FormRequest
                 },
             ],
             'nueva' => [
-                'required', 'string', new PasswordSegura(),
+                'required', 'string', new PasswordSegura,
                 function (string $attribute, mixed $value, \Closure $fail) use ($usuario) {
                     if (Hash::check($value, $usuario->hashed_password)) {
                         $fail('La nueva contraseña debe ser distinta de la actual.');

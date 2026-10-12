@@ -58,7 +58,7 @@ class StoreExpedienteRequest extends FormRequest
         return array_merge($reglas, [
             // Los dos son opcionales por separado, pero no pueden faltar los dos a la vez:
             // sin nombre hace falta la CURP, y sin CURP hace falta el nombre.
-            'nombre_completo' => ['nullable', 'required_without:curp', 'string', new NombrePersona()],
+            'nombre_completo' => ['nullable', 'required_without:curp', 'string', new NombrePersona],
             'curp' => ['nullable', 'required_without:nombre_completo', 'string'],
             'nss' => ['nullable', 'string'],
             'fecha_nacimiento' => ['nullable', 'date'],

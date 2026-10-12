@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Auditoria;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -17,7 +18,7 @@ class BitacoraController extends Controller
      * filtros por accion, dia y busqueda libre.
      *
      * @param  Request  $request  accion, fecha (dia en zona Mexico), q, page
-     * @return \Illuminate\Http\JsonResponse pagina de 20 eventos
+     * @return JsonResponse pagina de 20 eventos
      */
     public function index(Request $request)
     {

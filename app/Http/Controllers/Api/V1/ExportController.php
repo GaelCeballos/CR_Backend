@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\HistoriaClinica;
 use App\Services\ExpedienteBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -14,9 +15,7 @@ use Illuminate\Support\Carbon;
  */
 class ExportController extends Controller
 {
-    public function __construct(private ExpedienteBuilder $builder)
-    {
-    }
+    public function __construct(private ExpedienteBuilder $builder) {}
 
     /**
      * Get: da todos los expedientes de una jornada (por defecto, hoy en
@@ -24,7 +23,7 @@ class ExportController extends Controller
      * ese dia aunque se hayan realizado antes.
      *
      * @param  Request  $request  ?fecha=AAAA-MM-DD, opcional
-     * @return \Illuminate\Http\JsonResponse la fecha de la jornada y sus expedientes, ordenados por folio
+     * @return JsonResponse la fecha de la jornada y sus expedientes, ordenados por folio
      */
     public function excelData(Request $request)
     {

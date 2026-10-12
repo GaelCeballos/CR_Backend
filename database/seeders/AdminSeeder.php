@@ -24,7 +24,7 @@ class AdminSeeder extends Seeder
             return;
         }
 
-        $temporaryPassword = (new PasswordGeneratorService())->generar();
+        $temporaryPassword = (new PasswordGeneratorService)->generar();
 
         User::create([
             'email' => 'admin@crm-colima.mx',

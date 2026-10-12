@@ -8,6 +8,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\UpdateMeRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -20,7 +21,7 @@ class MeController extends Controller
      * El rol nunca se toma de este formulario, siempre queda igual.
      *
      * @param  UpdateMeRequest  $request  datos nuevos del perfil, ya validados
-     * @return \Illuminate\Http\JsonResponse usuario actualizado
+     * @return JsonResponse usuario actualizado
      */
     public function update(UpdateMeRequest $request)
     {
@@ -48,7 +49,7 @@ class MeController extends Controller
      * contraseña temporal.
      *
      * @param  ChangePasswordRequest  $request  contraseña actual y nueva, ya validadas
-     * @return \Illuminate\Http\JsonResponse usuario actualizado
+     * @return JsonResponse usuario actualizado
      */
     public function changePassword(ChangePasswordRequest $request)
     {

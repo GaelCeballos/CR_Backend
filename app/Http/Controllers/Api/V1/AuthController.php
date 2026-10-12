@@ -10,7 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -23,7 +25,7 @@ class AuthController extends Controller
      * cualquier token anterior del usuario y emite uno nuevo (sesion unica).
      *
      * @param  LoginRequest  $request  correo, contraseña y perfil elegido ("Ingresar como")
-     * @return \Illuminate\Http\JsonResponse usuario autenticado, token y ruta de redireccion
+     * @return JsonResponse usuario autenticado, token y ruta de redireccion
      */
     public function login(LoginRequest $request)
     {
@@ -32,7 +34,7 @@ class AuthController extends Controller
         $usuario = User::where('email', strtolower($data['email']))->first();
 
         if (! $usuario || ! Hash::check($data['password'], $usuario->hashed_password)) {
-            throw new InvalidCredentialsException();
+            throw new InvalidCredentialsException;
         }
 
         if ($usuario->estado === EstadoUsuario::Inactivo) {
@@ -71,7 +73,7 @@ class AuthController extends Controller
      * Post: destruye unicamente el token con el que se hizo esta peticion.
      *
      * @param  Request  $request  peticion autenticada con el token a revocar
-     * @return \Illuminate\Http\Response respuesta vacia (204)
+     * @return Response respuesta vacia (204)
      */
     public function logout(Request $request)
     {
@@ -84,7 +86,7 @@ class AuthController extends Controller
      * Get: devuelve los datos del usuario que esta autenticado en esta peticion.
      *
      * @param  Request  $request  peticion autenticada
-     * @return \Illuminate\Http\JsonResponse datos del usuario actual
+     * @return JsonResponse datos del usuario actual
      */
     public function me(Request $request)
     {

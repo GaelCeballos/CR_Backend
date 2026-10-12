@@ -6,6 +6,7 @@ use App\Exceptions\NotFoundApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use App\Services\CalculoClinicoService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -14,16 +15,14 @@ use Illuminate\Http\Request;
  */
 class PacienteController extends Controller
 {
-    public function __construct(private CalculoClinicoService $calculos)
-    {
-    }
+    public function __construct(private CalculoClinicoService $calculos) {}
 
     /**
      * Get: busca pacientes por CURP, NSS o nombre (sin importar acentos),
      * para el buscador del encabezado.
      *
      * @param  Request  $request  parametro "q", al menos 2 caracteres
-     * @return \Illuminate\Http\JsonResponse hasta 8 coincidencias
+     * @return JsonResponse hasta 8 coincidencias
      */
     public function buscar(Request $request)
     {
@@ -53,7 +52,7 @@ class PacienteController extends Controller
      * nuevo.
      *
      * @param  Request  $request  curp y/o nss, y opcionalmente excluir_folio
-     * @return \Illuminate\Http\JsonResponse paciente_id, ultimo_folio y los datos fijos
+     * @return JsonResponse paciente_id, ultimo_folio y los datos fijos
      */
     public function lookup(Request $request)
     {

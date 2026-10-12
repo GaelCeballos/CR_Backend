@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\HistoriaClinica;
 use App\Models\User;
 use App\Support\CamposExpediente;
+use App\Support\EtiquetasCampoExpediente;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,8 +23,7 @@ class ExpedienteBuilder
         private PacienteUpsertService $pacientes,
         private CalculoClinicoService $calculos,
         private GradienteService $gradiente,
-    ) {
-    }
+    ) {}
 
     /**
      * Crea un expediente nuevo completo: encuentra/crea al paciente, decide
@@ -167,7 +167,7 @@ class ExpedienteBuilder
 
     /**
      * @return array<int, string> las relaciones que debe traer cargadas una
-     *                             historia clinica antes de aplanarla
+     *                            historia clinica antes de aplanarla
      */
     private function relaciones(): array
     {
@@ -335,7 +335,7 @@ class ExpedienteBuilder
             }
 
             if (($antes[$columna] ?? null) != $valor) {
-                $cambios[] = \App\Support\EtiquetasCampoExpediente::etiqueta($columna);
+                $cambios[] = EtiquetasCampoExpediente::etiqueta($columna);
             }
         }
 

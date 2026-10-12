@@ -6,6 +6,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -64,6 +65,14 @@ class ApiExceptionHandler
             }
         });
 
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return new JsonResponse([
+                    'error' => ['code' => 'TOO_MANY_REQUESTS', 'message' => 'Demasiados intentos. Intenta de nuevo en un momento.'],
+                ], 429);
+            }
+        });
+
         $exceptions->render(function (ModelNotFoundException|NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
                 return new JsonResponse([
@@ -81,7 +90,8 @@ class ApiExceptionHandler
 
             if ($e instanceof ApiException || $e instanceof ValidationException
                 || $e instanceof AuthenticationException || $e instanceof AuthorizationException
-                || $e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
+                || $e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException
+                || $e instanceof ThrottleRequestsException) {
                 return null;
             }
 

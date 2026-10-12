@@ -12,6 +12,7 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\PasswordGeneratorService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -29,7 +30,7 @@ class UserController extends Controller
      *
      * @param  StoreUserRequest  $request  datos de la cuenta nueva, ya validados
      * @param  PasswordGeneratorService  $passwords  genera la contraseña temporal cuando falta
-     * @return \Illuminate\Http\JsonResponse la cuenta creada y su contraseña temporal
+     * @return JsonResponse la cuenta creada y su contraseña temporal
      */
     public function store(StoreUserRequest $request, PasswordGeneratorService $passwords)
     {
@@ -66,7 +67,7 @@ class UserController extends Controller
      * expedientes); sin ese parametro, da la tabla completa de administracion.
      *
      * @param  Request  $request  filtros opcionales: q, rol, estado, vista
-     * @return \Illuminate\Http\JsonResponse lista de usuarios segun la vista pedida
+     * @return JsonResponse lista de usuarios segun la vista pedida
      */
     public function index(Request $request)
     {
@@ -104,7 +105,7 @@ class UserController extends Controller
      * Get: detalle de una cuenta, incluyendo el nombre de quien la creo.
      *
      * @param  User  $user  cuenta a consultar (enlace de ruta implicito)
-     * @return \Illuminate\Http\JsonResponse datos completos de la cuenta
+     * @return JsonResponse datos completos de la cuenta
      */
     public function show(User $user)
     {
@@ -118,7 +119,7 @@ class UserController extends Controller
      *
      * @param  UpdateUserRequest  $request  datos nuevos de la cuenta, ya validados
      * @param  User  $user  cuenta a editar (enlace de ruta implicito)
-     * @return \Illuminate\Http\JsonResponse cuenta actualizada
+     * @return JsonResponse cuenta actualizada
      */
     public function update(UpdateUserRequest $request, User $user)
     {
@@ -176,7 +177,7 @@ class UserController extends Controller
      *
      * @param  User  $user  cuenta a la que se le restablece la contraseña
      * @param  PasswordGeneratorService  $passwords  genera la nueva contraseña temporal
-     * @return \Illuminate\Http\JsonResponse la nueva contraseña temporal
+     * @return JsonResponse la nueva contraseña temporal
      */
     public function resetPassword(User $user, PasswordGeneratorService $passwords)
     {

@@ -29,7 +29,7 @@ class MedicoFirmanteSeeder extends Seeder
 
         User::create([
             'email' => $email,
-            'hashed_password' => Hash::make((new PasswordGeneratorService())->generar()),
+            'hashed_password' => Hash::make((new PasswordGeneratorService)->generar()),
             'nombre_completo' => 'MANUEL ALEJANDRO CORIA SALAS',
             'cedula_profesional' => '14021036',
             'universidad' => 'UNIVERSIDAD DE COLIMA',

@@ -29,10 +29,10 @@ class UpdateUserRequest extends FormRequest
         $esMedico = $this->input('rol') === 'servicios_medicos';
 
         return [
-            'nombre_completo' => ['required', 'string', new NombrePersona()],
+            'nombre_completo' => ['required', 'string', new NombrePersona],
             'email' => ['required', 'email'],
             'rol' => ['required', Rule::in(['admin', 'servicios_medicos'])],
-            'cedula_profesional' => [$esMedico ? 'required' : 'nullable', 'string', new CedulaProfesional()],
+            'cedula_profesional' => [$esMedico ? 'required' : 'nullable', 'string', new CedulaProfesional],
             'universidad' => [$esMedico ? 'required' : 'nullable', 'string', 'min:2'],
             'estado' => ['required', Rule::in(['activo', 'inactivo'])],
         ];
