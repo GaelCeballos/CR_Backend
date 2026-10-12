@@ -83,7 +83,8 @@ class ExportTest extends TestCase
         $respuesta->assertStatus(200)
             ->assertJsonCount(1, 'items')
             ->assertJsonPath('items.0.folio', 1)
-            ->assertJsonPath('items.0.nombre_completo', 'Garcia Lopez Juan Carlos');
+            ->assertJsonPath('items.0.values.nombre_completo', 'Garcia Lopez Juan Carlos')
+            ->assertJsonPath('items.0.creado_por.nombre', $medico->nombre_completo);
     }
 
     /**
