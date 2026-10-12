@@ -170,6 +170,8 @@ class UsersTest extends TestCase
      */
     private function actingAsUsuario(User $usuario): self
     {
+        $this->app['auth']->forgetGuards();
+
         $token = $usuario->createToken('api')->plainTextToken;
 
         return $this->withHeader('Authorization', "Bearer {$token}");

@@ -12,6 +12,7 @@ use App\Services\AuditoriaService;
 use App\Services\ExpedienteBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 /**
  * Navegador, alta, consulta y edicion de expedientes (historias clinicas).
@@ -176,6 +177,36 @@ class ExpedienteController extends Controller
         $this->bitacora->registrar($usuario, AccionAuditoria::EdicionDeExpediente, $historia, $this->detalleEdicion($campos));
 
         return response()->json(new ExpedienteResource($historia));
+    }
+
+    /**
+     * Get: da los datos completos de un expediente para que el frontend
+     * genere el PDF oficial (PECO o TX); el backend nunca genera el archivo,
+     * solo entrega los datos y valida que quien los pide sea administrador.
+     *
+     * @param  Request  $request  debe traer ?plantilla=PECO|TX
+     * @param  HistoriaClinica  $historia  expediente a exportar (enlazado por folio)
+     * @return \Illuminate\Http\JsonResponse el expediente completo mas la plantilla solicitada
+     */
+    public function datosParaPdf(Request $request, HistoriaClinica $historia)
+    {
+        $plantilla = $request->validate([
+            'plantilla' => ['required', Rule::in(['PECO', 'TX'])],
+        ])['plantilla'];
+
+        $historia->load(['paciente', 'domicilio', 'creador', 'editor']);
+
+        $this->bitacora->registrar(
+            $request->user(),
+            AccionAuditoria::Consulta,
+            $historia,
+            "Descarga de datos para PDF ({$plantilla})",
+        );
+
+        return response()->json(array_merge(
+            (new ExpedienteResource($historia))->resolve($request),
+            ['plantilla' => $plantilla],
+        ));
     }
 
     /**

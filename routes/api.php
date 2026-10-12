@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BitacoraController;
 use App\Http\Controllers\Api\V1\ExpedienteController;
+use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\PacienteController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -39,6 +41,12 @@ Route::prefix('v1')->group(function () {
                 Route::get('users/{user}', [UserController::class, 'show']);
                 Route::put('users/{user}', [UserController::class, 'update']);
                 Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
+                Route::get('bitacora', [BitacoraController::class, 'index']);
+
+                // Sustituyen la descarga binaria de PDF/Excel: el frontend ya
+                // construye esos archivos; aqui solo se entregan los datos.
+                Route::get('expedientes/{historia}/pdf', [ExpedienteController::class, 'datosParaPdf']);
+                Route::get('export/excel', [ExportController::class, 'excelData']);
             });
 
             Route::get('pacientes/buscar', [PacienteController::class, 'buscar']);

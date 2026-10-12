@@ -322,9 +322,18 @@ class ExpedienteBuilder
      */
     private function etiquetasDeCambios(array $antes, array $despues): array
     {
+        // Estas columnas se derivan automaticamente de otras (peso/talla, fecha
+        // de nacimiento): si cambian es solo consecuencia de un campo ya listado,
+        // asi que no deben aparecer como un cambio aparte.
+        $calculadas = ['ta_conjunta', 'imc', 'estado_nutricional', 'edad', 'grupo_edad', 'folio', 'fecha_estudios'];
+
         $cambios = [];
 
         foreach ($despues as $columna => $valor) {
+            if (in_array($columna, $calculadas, true)) {
+                continue;
+            }
+
             if (($antes[$columna] ?? null) != $valor) {
                 $cambios[] = \App\Support\EtiquetasCampoExpediente::etiqueta($columna);
             }
