@@ -134,6 +134,10 @@ class UserController extends Controller
             throw new ForbiddenException('No puedes quitarte el rol de Administrador a ti mismo.');
         }
 
+        // En este endpoint, quien edita siempre es un admin activo distinto a $user,
+        // asi que esta condicion rara vez se cumple (las dos salvaguardas de arriba
+        // ya bloquean la auto-edicion). Se deja como defensa adicional por si en el
+        // futuro se agrega edicion en lote o hay dos peticiones concurrentes.
         $dejaDeSerAdminActivo = $user->rol === RolUsuario::Admin
             && ($data['rol'] !== RolUsuario::Admin->value || $data['estado'] === EstadoUsuario::Inactivo->value);
 

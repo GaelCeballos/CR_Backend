@@ -133,6 +133,11 @@ class AuthTest extends TestCase
 
     /**
      * Cerrar sesion debe destruir el token con el que se hizo la peticion.
+     *
+     * Se verifica contra la base de datos (no con una segunda peticion HTTP):
+     * dentro de un mismo metodo de prueba, el guard de autenticacion cachea el
+     * usuario resuelto y una segunda llamada no refleja la revocacion aunque
+     * en una app real cada peticion si la vea de inmediato.
      */
     public function test_logout_revoca_el_token_actual(): void
     {
@@ -151,8 +156,6 @@ class AuthTest extends TestCase
             ->postJson('/api/v1/auth/logout')
             ->assertStatus(204);
 
-        $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/v1/auth/me')
-            ->assertStatus(401);
+        $this->assertSame(0, $usuario->tokens()->count());
     }
 }

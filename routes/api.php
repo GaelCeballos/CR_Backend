@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ExpedienteController;
 use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\PacienteController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +40,16 @@ Route::prefix('v1')->group(function () {
                 Route::put('users/{user}', [UserController::class, 'update']);
                 Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
             });
+
+            Route::get('pacientes/buscar', [PacienteController::class, 'buscar']);
+            Route::get('pacientes/lookup', [PacienteController::class, 'lookup']);
+
+            Route::get('expedientes/siguiente-folio', [ExpedienteController::class, 'siguienteFolio']);
+            Route::get('expedientes/estadisticas', [ExpedienteController::class, 'estadisticas']);
+            Route::get('expedientes', [ExpedienteController::class, 'index']);
+            Route::post('expedientes', [ExpedienteController::class, 'store']);
+            Route::get('expedientes/{historia}', [ExpedienteController::class, 'show']);
+            Route::put('expedientes/{historia}', [ExpedienteController::class, 'update']);
         });
     });
 });

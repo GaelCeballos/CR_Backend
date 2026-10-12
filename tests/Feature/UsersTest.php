@@ -116,21 +116,22 @@ class UsersTest extends TestCase
     }
 
     /**
-     * Degradar al ultimo admin activo desde otra cuenta de admin debe rechazarse.
+     * Si SI queda otro admin activo (quien hace la edicion), degradar a un
+     * segundo admin debe permitirse con normalidad.
      */
-    public function test_no_puede_quedar_el_sistema_sin_ningun_admin_activo(): void
+    public function test_se_puede_degradar_un_admin_si_queda_otro_activo(): void
     {
         $adminQueEdita = User::factory()->admin()->create();
-        $unicoOtroAdmin = User::factory()->admin()->create();
+        $otroAdmin = User::factory()->admin()->create();
 
-        $this->actingAsUsuario($adminQueEdita)->putJson("/api/v1/users/{$unicoOtroAdmin->id}", [
-            'nombre_completo' => $unicoOtroAdmin->nombre_completo,
-            'email' => $unicoOtroAdmin->email,
+        $this->actingAsUsuario($adminQueEdita)->putJson("/api/v1/users/{$otroAdmin->id}", [
+            'nombre_completo' => $otroAdmin->nombre_completo,
+            'email' => $otroAdmin->email,
             'rol' => 'servicios_medicos',
             'cedula_profesional' => '12345678',
             'universidad' => 'Universidad de Colima',
             'estado' => 'activo',
-        ])->assertStatus(409)->assertJsonPath('error.message', 'Debe quedar al menos un Administrador activo.');
+        ])->assertStatus(200)->assertJsonPath('user.rol', 'servicios_medicos');
     }
 
     /**
@@ -154,17 +155,13 @@ class UsersTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $medico = User::factory()->create();
-
-        $tokenMedico = $medico->createToken('api')->plainTextToken;
+        $medico->createToken('api');
 
         $respuesta = $this->actingAsUsuario($admin)
             ->postJson("/api/v1/users/{$medico->id}/reset-password");
 
         $respuesta->assertStatus(200)->assertJsonStructure(['temporary_password']);
-
-        $this->withHeader('Authorization', "Bearer {$tokenMedico}")
-            ->getJson('/api/v1/auth/me')
-            ->assertStatus(401);
+        $this->assertSame(0, $medico->tokens()->count());
     }
 
     /**
