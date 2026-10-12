@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Crea la tabla pacientes y los indices unicos parciales de CURP/NSS.
+     */
     public function up(): void
     {
         Schema::create('pacientes', function (Blueprint $table) {
@@ -28,6 +31,9 @@ return new class extends Migration
         DB::statement('CREATE UNIQUE INDEX pacientes_nss_uq ON pacientes (nss) WHERE nss IS NOT NULL');
     }
 
+    /**
+     * Elimina la tabla pacientes.
+     */
     public function down(): void
     {
         Schema::dropIfExists('pacientes');

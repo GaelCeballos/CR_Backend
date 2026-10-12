@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Crea la tabla users con sus restricciones de formato (correo, cedula, nombre).
+     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -31,6 +34,9 @@ return new class extends Migration
         DB::statement("ALTER TABLE users ADD CONSTRAINT medico_completo CHECK (rol <> 'servicios_medicos' OR (cedula_profesional IS NOT NULL AND char_length(btrim(coalesce(universidad, ''))) >= 2))");
     }
 
+    /**
+     * Elimina la tabla users.
+     */
     public function down(): void
     {
         Schema::dropIfExists('users');

@@ -4,11 +4,16 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Vista para el selector de medicos (spec §2.4). Las vistas no se crean con el
- * Schema Builder; esto es normal incluso en migraciones Laravel estándar.
+ * Vista de solo lectura para el selector de medicos del formulario de expedientes.
+ * Las vistas no se crean con el Schema Builder; esto es normal incluso en
+ * migraciones Laravel estandar.
  */
 return new class extends Migration
 {
+    /**
+     * Crea la vista medicos_selector: medicos activos con cedula y universidad
+     * capturadas, listos para mostrarse en el selector del formulario.
+     */
     public function up(): void
     {
         DB::statement(<<<'SQL'
@@ -21,6 +26,9 @@ return new class extends Migration
         SQL);
     }
 
+    /**
+     * Elimina la vista medicos_selector.
+     */
     public function down(): void
     {
         DB::statement('drop view if exists medicos_selector');

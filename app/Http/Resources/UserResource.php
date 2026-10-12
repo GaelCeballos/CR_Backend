@@ -5,8 +5,16 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * Da la forma publica de un usuario para las respuestas JSON: nunca incluye
+ * el hash de la contraseña ni otros datos internos del modelo.
+ */
 class UserResource extends JsonResource
 {
+    /**
+     * @param  Request  $request  peticion HTTP actual
+     * @return array<string, mixed> datos del usuario que se envian al cliente
+     */
     public function toArray(Request $request): array
     {
         return [

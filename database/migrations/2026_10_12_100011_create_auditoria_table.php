@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Bitacora de accesos y cambios (spec §3.5, §4.6). Solo la escribe el servidor,
-     * dentro de la misma transaccion del evento que la dispara.
+     * Crea la tabla auditoria. Solo el servidor escribe aqui, dentro de la misma
+     * transaccion del evento que la dispara (creacion, edicion o consulta).
      */
     public function up(): void
     {
@@ -28,6 +28,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Elimina la tabla auditoria.
+     */
     public function down(): void
     {
         Schema::dropIfExists('auditoria');

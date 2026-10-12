@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Esta API no tiene ruta "login": nunca debe intentar redirigir ahi
+        // cuando falta autenticacion, solo debe responder el error JSON.
+        \Illuminate\Auth\Middleware\Authenticate::redirectUsing(fn () => null);
+
         $middleware->alias([
             'role' => App\Http\Middleware\EnsureRole::class,
             'active' => App\Http\Middleware\EnsureActiveUser::class,

@@ -1,0 +1,43 @@
+<?php
+
+use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\UserController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Rutas de la API (v1)
+|--------------------------------------------------------------------------
+|
+| Publicas: solo el login. Todo lo demas requiere un token Bearer vigente
+| (auth:sanctum) y una cuenta activa (middleware "active"). Mientras la
+| contraseña sea temporal (middleware "no-temp-password"), solo /me,
+| /me/password, /auth/logout y /auth/me quedan disponibles.
+|
+*/
+
+Route::prefix('v1')->group(function () {
+    Route::post('auth/login', [AuthController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'active'])->group(function () {
+        Route::post('auth/logout', [AuthController::class, 'logout']);
+        Route::get('auth/me', [AuthController::class, 'me']);
+
+        Route::put('me', [MeController::class, 'update']);
+        Route::post('me/password', [MeController::class, 'changePassword']);
+
+        Route::middleware('no-temp-password')->group(function () {
+            // El listado (GET /users) decide internamente si es la vista
+            // "selector" (cualquier usuario) o la tabla completa (solo admin).
+            Route::get('users', [UserController::class, 'index']);
+
+            Route::middleware('role:admin')->group(function () {
+                Route::post('users', [UserController::class, 'store']);
+                Route::get('users/{user}', [UserController::class, 'show']);
+                Route::put('users/{user}', [UserController::class, 'update']);
+                Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
+            });
+        });
+    });
+});
