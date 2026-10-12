@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: cr_backend_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html:z
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cr_backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: cr_backend_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./:/var/www/html:ro,z
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro,z
+    depends_on:
+      - app
+    networks:
+      - cr_backend
+
+  db:
+    image: postgres:16-alpine
+    container_name: cr_backend_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-cr_backend}
+      POSTGRES_USER: ${DB_USERNAME:-cr_backend}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_this_password}
+    volumes:
+      - cr_backend_pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_FORWARD_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-cr_backend} -d ${DB_DATABASE:-cr_backend}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cr_backend
+
+networks:
+  cr_backend:
+    driver: bridge
+
+volumes:
+  cr_backend_pgdata:
+    driver: local
