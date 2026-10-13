@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BitacoraController;
+use App\Http\Controllers\Api\V1\CierreAnioController;
 use App\Http\Controllers\Api\V1\ExpedienteController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\MeController;
@@ -45,8 +46,13 @@ Route::prefix('v1')->group(function () {
 
                 // Sustituyen la descarga binaria de PDF/Excel: el frontend ya
                 // construye esos archivos; aqui solo se entregan los datos.
-                Route::get('expedientes/{historia}/pdf', [ExpedienteController::class, 'datosParaPdf']);
+                Route::get('expedientes/{clave}/pdf', [ExpedienteController::class, 'datosParaPdf']);
                 Route::get('export/excel', [ExportController::class, 'excelData']);
+
+                // Cierre y respaldo anual: el admin descarga el Excel completo
+                // de un año pendiente y, al confirmar, esos registros se borran.
+                Route::get('admin/anios/pendientes', [CierreAnioController::class, 'pendientes']);
+                Route::post('admin/anios/{anio}/cerrar', [CierreAnioController::class, 'cerrar']);
             });
 
             Route::get('pacientes/buscar', [PacienteController::class, 'buscar']);
@@ -56,8 +62,8 @@ Route::prefix('v1')->group(function () {
             Route::get('expedientes/estadisticas', [ExpedienteController::class, 'estadisticas']);
             Route::get('expedientes', [ExpedienteController::class, 'index']);
             Route::post('expedientes', [ExpedienteController::class, 'store']);
-            Route::get('expedientes/{historia}', [ExpedienteController::class, 'show']);
-            Route::put('expedientes/{historia}', [ExpedienteController::class, 'update']);
+            Route::get('expedientes/{clave}', [ExpedienteController::class, 'show']);
+            Route::put('expedientes/{clave}', [ExpedienteController::class, 'update']);
         });
     });
 });

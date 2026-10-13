@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Auditoria;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\ReseteaSecuenciaFolio;
 use Tests\TestCase;
 
 /**
@@ -15,7 +14,12 @@ use Tests\TestCase;
 class ExpedientesTest extends TestCase
 {
     use RefreshDatabase;
-    use ReseteaSecuenciaFolio;
+
+    /** Clave de ruta "{anio}-{folio_anual}" para un folio creado hoy en una prueba. */
+    private function clave(int $folioAnual): string
+    {
+        return now('America/Mexico_City')->year."-{$folioAnual}";
+    }
 
     /**
      * Datos minimos de un expediente nuevo, listos para extender en cada prueba.
@@ -62,7 +66,8 @@ class ExpedientesTest extends TestCase
             ->assertJsonPath('values.gradiente', 2);
 
         $this->assertDatabaseHas('auditoria', [
-            'folio' => 1,
+            'anio' => now('America/Mexico_City')->year,
+            'folio_anual' => 1,
             'accion' => 'Creación de Folio',
         ]);
     }
@@ -108,9 +113,13 @@ class ExpedientesTest extends TestCase
         $medico = User::factory()->create();
         $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase());
 
-        $this->actingAsUsuario($medico)->getJson('/api/v1/expedientes/1')->assertStatus(200);
+        $this->actingAsUsuario($medico)->getJson('/api/v1/expedientes/'.$this->clave(1))->assertStatus(200);
 
-        $this->assertDatabaseHas('auditoria', ['folio' => 1, 'accion' => 'Consulta']);
+        $this->assertDatabaseHas('auditoria', [
+            'anio' => now('America/Mexico_City')->year,
+            'folio_anual' => 1,
+            'accion' => 'Consulta',
+        ]);
     }
 
     /**
@@ -122,11 +131,16 @@ class ExpedientesTest extends TestCase
         $medico = User::factory()->create();
         $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase());
 
-        $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/1', $this->payloadBase());
-        $this->assertDatabaseHas('auditoria', ['folio' => 1, 'accion' => 'Edición de Expediente', 'detalle' => 'Guardado sin cambios']);
+        $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/'.$this->clave(1), $this->payloadBase());
+        $this->assertDatabaseHas('auditoria', [
+            'anio' => now('America/Mexico_City')->year,
+            'folio_anual' => 1,
+            'accion' => 'Edición de Expediente',
+            'detalle' => 'Guardado sin cambios',
+        ]);
 
         $payloadConCambio = array_merge($this->payloadBase(), ['peso' => '90']);
-        $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/1', $payloadConCambio);
+        $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/'.$this->clave(1), $payloadConCambio);
 
         // No se ordena por "fecha": dentro de una misma transaccion de prueba,
         // now() de Postgres no avanza entre dos inserciones, asi que el id

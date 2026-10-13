@@ -34,14 +34,15 @@ class BitacoraController extends Controller
         }
 
         if ($q = trim((string) $request->query('q', ''))) {
-            $query->where(function ($consulta) use ($q) {
-                $consulta->where('usuario_nombre', 'ilike', "%{$q}%")
-                    ->orWhere('paciente', 'ilike', "%{$q}%");
-
-                if (ctype_digit($q)) {
-                    $consulta->orWhere('folio', (int) $q);
-                }
-            });
+            if (ctype_digit($q)) {
+                // Un texto puramente numerico se interpreta como folio exacto, igual que en el navegador de expedientes.
+                $query->where('folio_anual', (int) $q);
+            } else {
+                $query->where(function ($consulta) use ($q) {
+                    $consulta->where('usuario_nombre', 'ilike', "%{$q}%")
+                        ->orWhere('paciente', 'ilike', "%{$q}%");
+                });
+            }
         }
 
         $total = $query->count();
@@ -54,7 +55,8 @@ class BitacoraController extends Controller
                 'fecha' => $e->fecha->toIso8601String(),
                 'usuario_nombre' => $e->usuario_nombre,
                 'accion' => $e->accion->value,
-                'folio' => $e->folio,
+                'anio' => $e->anio,
+                'folio' => $e->folio_anual,
                 'paciente' => $e->paciente,
                 'detalle' => $e->detalle,
             ]),

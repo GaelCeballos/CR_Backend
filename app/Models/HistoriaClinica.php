@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * audiometria) viven en tablas aparte relacionadas por historia_id.
  */
 #[Fillable([
-    'paciente_id', 'domicilio_id', 'medico_id',
+    'paciente_id', 'domicilio_id', 'medico_id', 'folio_anual', 'fecha_estudios',
     'puesto', 'empresa', 'zona_trabajo', 'tipo_examen_motivo', 'antiguedad_empresa',
     'antiguedad_puesto', 'exposicion_poe', 'area', 'tipo_examen_categoria',
     'edad', 'grupo_edad', 'telefono', 'religion', 'estado_civil',
@@ -43,18 +43,9 @@ class HistoriaClinica extends Model
     }
 
     /**
-     * Usa el folio (no el uuid) como clave para el enlace de ruta implicito de Laravel.
-     *
-     * @return string nombre de la columna a usar en las rutas (p. ej. /expedientes/{folio})
-     */
-    public function getRouteKeyName(): string
-    {
-        return 'folio';
-    }
-
-    /**
-     * Tras insertar, vuelve a leer la fila para traer 'folio' y 'fecha_estudios',
-     * que los calcula Postgres y Eloquent no los recupera solo (solo recupera el id).
+     * Tras insertar, vuelve a leer la fila para traer 'anio' y 'fecha_estudios',
+     * que los calcula Postgres (columna generada / default) y Eloquent no los
+     * recupera solo (solo recupera el id).
      */
     protected static function booted(): void
     {

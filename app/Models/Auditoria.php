@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * Un evento de bitacora: quien hizo que, sobre que expediente y cuando. Solo el
  * servidor escribe en esta tabla (ver App\Services\AuditoriaService).
  */
-#[Fillable(['usuario_id', 'usuario_nombre', 'accion', 'historia_id', 'folio', 'paciente', 'detalle'])]
+#[Fillable(['usuario_id', 'usuario_nombre', 'accion', 'historia_id', 'anio', 'folio_anual', 'paciente', 'detalle'])]
 class Auditoria extends Model
 {
     use HasUuids;

@@ -21,7 +21,12 @@ class ExpedienteResource extends JsonResource
         $builder = app(ExpedienteBuilder::class);
 
         return [
-            'folio' => $this->folio,
+            // "folio" se mantiene como alias de folio_anual por compatibilidad con
+            // el resto del codigo (toDbPayload/EtiquetasCampoExpediente); el frontend
+            // arma la clave de ruta "{anio}-{folio_anual}" con los dos campos nuevos.
+            'folio' => $this->folio_anual,
+            'anio' => $this->anio,
+            'folio_anual' => $this->folio_anual,
             'fecha_estudios' => optional($this->fecha_estudios)->toDateString(),
             'values' => $builder->instantanea($this->resource),
             'creado_por' => [

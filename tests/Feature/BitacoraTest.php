@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\ReseteaSecuenciaFolio;
 use Tests\TestCase;
 
 /**
@@ -14,7 +13,6 @@ use Tests\TestCase;
 class BitacoraTest extends TestCase
 {
     use RefreshDatabase;
-    use ReseteaSecuenciaFolio;
 
     /**
      * Un usuario de servicios medicos no puede leer la bitacora.
