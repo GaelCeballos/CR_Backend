@@ -6,6 +6,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -13,11 +14,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 /**
- * Centraliza el formato de error unico de la API (spec §4.0):
- * { "error": { "code", "message", "fields"? } }
+ * Convierte cualquier excepcion lanzada dentro de /api/* al formato de error
+ * unico de la API: { "error": { "code", "message", "fields"? } }.
  */
 class ApiExceptionHandler
 {
+    /**
+     * Registra todos los "render" necesarios en el manejador de excepciones de la app.
+     *
+     * @param  Exceptions  $exceptions  configurador de excepciones de bootstrap/app.php
+     */
     public static function register(Exceptions $exceptions): void
     {
         $exceptions->render(function (ApiException $e, Request $request) {
@@ -59,6 +65,14 @@ class ApiExceptionHandler
             }
         });
 
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return new JsonResponse([
+                    'error' => ['code' => 'TOO_MANY_REQUESTS', 'message' => 'Demasiados intentos. Intenta de nuevo en un momento.'],
+                ], 429);
+            }
+        });
+
         $exceptions->render(function (ModelNotFoundException|NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
                 return new JsonResponse([
@@ -67,6 +81,8 @@ class ApiExceptionHandler
             }
         });
 
+        // Cualquier otra excepcion no prevista: se registra en el log y se
+        // responde un 500 generico, sin filtrar detalles internos al cliente.
         $exceptions->render(function (Throwable $e, Request $request) {
             if (! $request->is('api/*')) {
                 return null;
@@ -74,7 +90,8 @@ class ApiExceptionHandler
 
             if ($e instanceof ApiException || $e instanceof ValidationException
                 || $e instanceof AuthenticationException || $e instanceof AuthorizationException
-                || $e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
+                || $e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException
+                || $e instanceof ThrottleRequestsException) {
                 return null;
             }
 

@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Historia laboral (046-057): 3 trabajos por historia, normalizados en filas.
+     * Crea la tabla hc_historia_laboral: hasta 3 trabajos previos por historia
+     * clinica (uno por cada valor de "orden": 1 actual, 2 penultimo, 3 antepenultimo).
      */
     public function up(): void
     {
@@ -26,6 +27,9 @@ return new class extends Migration
         DB::statement('ALTER TABLE hc_historia_laboral ADD CONSTRAINT orden_valido CHECK (orden IN (1, 2, 3))');
     }
 
+    /**
+     * Elimina la tabla hc_historia_laboral.
+     */
     public function down(): void
     {
         Schema::dropIfExists('hc_historia_laboral');

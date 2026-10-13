@@ -2,6 +2,10 @@
 
 namespace App\Exceptions;
 
+/**
+ * Error 403 especifico: la cuenta tiene una contraseña temporal pendiente de
+ * cambiar y esta intentando usar un endpoint distinto a /me o /me/password.
+ */
 class TemporaryPasswordException extends ApiException
 {
     public function __construct()

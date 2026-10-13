@@ -16,6 +16,35 @@ services:
     networks:
       - cr_backend
 
+  # Servicio dedicado para "php artisan test": aisla por completo las variables
+  # de entorno de prueba (base de datos y APP_ENV) de las del servicio "app".
+  # Sin esto, el entorno real del contenedor (inyectado por env_file) pisa
+  # cualquier <env> de phpunit.xml y las pruebas acaban corriendo contra la
+  # base de datos de desarrollo.
+  app_test:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html:z
+    env_file:
+      - .env
+    environment:
+      APP_ENV: testing
+      DB_DATABASE: cr_backend_testing
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      BCRYPT_ROUNDS: 4
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cr_backend
+    profiles:
+      - test
+
   nginx:
     image: nginx:1.27-alpine
     container_name: cr_backend_nginx

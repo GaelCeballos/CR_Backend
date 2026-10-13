@@ -1,5 +1,10 @@
 <?php
 
+use App\Exceptions\ApiExceptionHandler;
+use App\Http\Middleware\BlockIfTemporaryPassword;
+use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\EnsureRole;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,10 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Esta API no tiene ruta "login": nunca debe intentar redirigir ahi
+        // cuando falta autenticacion, solo debe responder el error JSON.
+        Authenticate::redirectUsing(fn () => null);
+
         $middleware->alias([
-            'role' => App\Http\Middleware\EnsureRole::class,
-            'active' => App\Http\Middleware\EnsureActiveUser::class,
-            'no-temp-password' => App\Http\Middleware\BlockIfTemporaryPassword::class,
+            'role' => EnsureRole::class,
+            'active' => EnsureActiveUser::class,
+            'no-temp-password' => BlockIfTemporaryPassword::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -24,5 +33,5 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
-        App\Exceptions\ApiExceptionHandler::register($exceptions);
+        ApiExceptionHandler::register($exceptions);
     })->create();

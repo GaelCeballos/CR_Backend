@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Modulo 1:1 de antecedentes (027-045, 058-074) — spec §2.3 / Apendice A.
+     * Crea la tabla hc_antecedentes: heredofamiliares, no patologicos, habitos y
+     * patologicos de una historia clinica (relacion 1 a 1 con historias_clinicas).
      */
     public function up(): void
     {
@@ -68,6 +69,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Elimina la tabla hc_antecedentes.
+     */
     public function down(): void
     {
         Schema::dropIfExists('hc_antecedentes');

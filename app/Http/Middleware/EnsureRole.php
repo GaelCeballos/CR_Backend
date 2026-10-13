@@ -8,10 +8,17 @@ use Closure;
 use Illuminate\Http\Request;
 
 /**
- * Matriz de permisos por rol (spec §1.3): solo admin puede usar las rutas marcadas con este middleware.
+ * Deja pasar la peticion solo si el usuario autenticado tiene el rol indicado
+ * en la ruta (p. ej. ->middleware('role:admin')).
  */
 class EnsureRole
 {
+    /**
+     * @param  Request  $request  peticion entrante, ya autenticada por auth:sanctum
+     * @param  Closure  $next  siguiente paso del pipeline de middleware
+     * @param  string  $rol  valor del enum RolUsuario requerido para continuar
+     * @return mixed la respuesta del siguiente middleware/controlador, o un error 403
+     */
     public function handle(Request $request, Closure $next, string $rol)
     {
         $usuario = $request->user();

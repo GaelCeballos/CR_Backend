@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Encabezado de una historia clinica (una visita/examen de un paciente). Los modulos
+ * clinicos (antecedentes, exploracion, laboratorio, gabinete, historia laboral,
+ * audiometria) viven en tablas aparte relacionadas por historia_id.
+ */
 #[Fillable([
     'paciente_id', 'domicilio_id', 'medico_id',
     'puesto', 'empresa', 'zona_trabajo', 'tipo_examen_motivo', 'antiguedad_empresa',
@@ -19,8 +24,14 @@ class HistoriaClinica extends Model
 {
     use HasUuids;
 
+    /** El nombre de tabla no sigue la pluralizacion automatica de "HistoriaClinica". */
     protected $table = 'historias_clinicas';
 
+    /**
+     * Castea las columnas de fecha y el booleano no_apto.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -31,73 +42,116 @@ class HistoriaClinica extends Model
         ];
     }
 
+    /**
+     * Usa el folio (no el uuid) como clave para el enlace de ruta implicito de Laravel.
+     *
+     * @return string nombre de la columna a usar en las rutas (p. ej. /expedientes/{folio})
+     */
     public function getRouteKeyName(): string
     {
         return 'folio';
     }
 
+    /**
+     * Tras insertar, vuelve a leer la fila para traer 'folio' y 'fecha_estudios',
+     * que los calcula Postgres y Eloquent no los recupera solo (solo recupera el id).
+     */
     protected static function booted(): void
     {
-        // 'folio' (identity) y 'fecha_estudios' (default calculado) los asigna Postgres:
-        // Eloquent solo recupera automáticamente la PK ('id') tras el insert.
         static::created(fn (HistoriaClinica $historia) => $historia->refresh());
     }
 
+    /**
+     * Paciente al que pertenece esta historia clinica.
+     */
     public function paciente()
     {
         return $this->belongsTo(Paciente::class);
     }
 
+    /**
+     * Domicilio vigente del paciente al momento de este examen.
+     */
     public function domicilio()
     {
         return $this->belongsTo(Domicilio::class);
     }
 
+    /**
+     * Medico que atendio esta visita.
+     */
     public function medico()
     {
         return $this->belongsTo(User::class, 'medico_id');
     }
 
+    /**
+     * Usuario que creo este registro.
+     */
     public function creador()
     {
         return $this->belongsTo(User::class, 'creado_por');
     }
 
+    /**
+     * Usuario que hizo la ultima edicion de este registro.
+     */
     public function editor()
     {
         return $this->belongsTo(User::class, 'actualizado_por');
     }
 
+    /**
+     * Antecedentes heredofamiliares, no patologicos, laborales y patologicos (1 a 1).
+     */
     public function antecedentes()
     {
         return $this->hasOne(HcAntecedente::class, 'historia_id');
     }
 
+    /**
+     * Exploracion fisica completa (1 a 1).
+     */
     public function exploracion()
     {
         return $this->hasOne(HcExploracion::class, 'historia_id');
     }
 
+    /**
+     * Resultados de laboratorio (1 a 1).
+     */
     public function laboratorio()
     {
         return $this->hasOne(HcLaboratorio::class, 'historia_id');
     }
 
+    /**
+     * Resultados de gabinete: rayos X, ECG, espirometria, etc. (1 a 1).
+     */
     public function gabinete()
     {
         return $this->hasOne(HcGabinete::class, 'historia_id');
     }
 
+    /**
+     * Los 3 trabajos previos del paciente (actual, penultimo, antepenultimo), ordenados.
+     */
     public function historiaLaboral()
     {
         return $this->hasMany(HcHistoriaLaboral::class, 'historia_id')->orderBy('orden');
     }
 
+    /**
+     * Umbrales de audiometria por oido y frecuencia.
+     */
     public function audiometria()
     {
         return $this->hasMany(HcAudiometria::class, 'historia_id');
     }
 
+    /**
+     * Eventos de bitacora (creacion, edicion, consulta) de esta historia.
+     */
     public function auditorias()
     {
         return $this->hasMany(Auditoria::class, 'historia_id');

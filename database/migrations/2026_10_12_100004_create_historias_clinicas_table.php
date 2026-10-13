@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Crea la tabla historias_clinicas: folio consecutivo, fecha de estudios
+     * automatica y los datos de la visita (puesto, empresa, dictamen, etc.).
+     */
     public function up(): void
     {
         Schema::create('historias_clinicas', function (Blueprint $table) {
@@ -71,6 +75,9 @@ return new class extends Migration
         DB::statement('ALTER TABLE historias_clinicas ADD CONSTRAINT r2_fecha_o_no_apto CHECK (NOT (no_apto AND fecha_siguiente_valoracion IS NOT NULL))');
     }
 
+    /**
+     * Elimina la tabla historias_clinicas.
+     */
     public function down(): void
     {
         Schema::dropIfExists('historias_clinicas');
