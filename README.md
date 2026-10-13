@@ -14,7 +14,6 @@ PostgreSQL, con autenticación por token, control de roles y bitácora de acceso
 | PostgreSQL | 16 |
 | Laravel Sanctum (autenticación) | 4.3 |
 | Docker / Docker Compose | 29 / v2 |
-| nginx | 1.27 |
 | Laravel Pint (estilo de código) | 1.32 |
 | PHPUnit | 12.5 |
 
@@ -80,8 +79,7 @@ database/
   migrations/        Una tabla (o vista) por archivo, en orden de dependencias
   seeders/           AdminSeeder (cuenta inicial), MedicoFirmanteSeeder (firmante oficial)
 docker/
-  php/               Dockerfile (PHP-FPM 8.4 + extensiones), opcache.ini
-  nginx/             Vhost de nginx
+  php/               Dockerfile (PHP 8.4 + Apache + extensiones, listo para Render), opcache.ini, entrypoint.sh
 routes/api.php       Todas las rutas, versionadas bajo /api/v1
 tests/
   Feature/           Auth, Users, Pacientes, Expedientes, Bitacora, Export (contra Postgres real)

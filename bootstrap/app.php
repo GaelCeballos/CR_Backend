@@ -22,6 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // cuando falta autenticacion, solo debe responder el error JSON.
         Authenticate::redirectUsing(fn () => null);
 
+        // Render (y cualquier PaaS) entrega las peticiones a traves de su propio
+        // proxy: sin esto, $request->ip() siempre da la IP interna del proxy (no
+        // la del cliente real), rompiendo el limite de intentos de login por IP.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => EnsureRole::class,
             'active' => EnsureActiveUser::class,

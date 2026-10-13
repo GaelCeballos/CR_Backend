@@ -38,14 +38,19 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Instalamos dependencias de Laravel
+# Instalamos dependencias de Laravel (--no-dev: phpunit/mockery/pail/etc. no van en producción)
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --prefer-dist --no-scripts --no-progress
+RUN composer install --no-interaction --prefer-dist --no-dev --no-scripts --no-progress
 
 # Copiamos el resto del código
 COPY . .
 
 # Optimizamos dependencias y ajustamos permisos
-RUN composer dump-autoload --optimize \
+RUN composer dump-autoload --optimize --no-dev \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# migrate/config:cache/route:cache corren al arrancar el contenedor (entrypoint.sh),
+# no aqui: las variables de entorno reales las da Render en tiempo de arranque, no en el build.
+RUN chmod +x docker/php/entrypoint.sh
+ENTRYPOINT ["docker/php/entrypoint.sh"]
 
