@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Exploracion fisica completa de una historia clinica (signos vitales, aspecto
+ * general, torax/abdomen, ojos, oidos, etc.) — relacion 1 a 1 con historias_clinicas.
+ */
 #[Fillable([
     'historia_id',
     'pulso', 'respiracion', 'temperatura', 'ta_sistolica', 'ta_diastolica', 'clasificacion_aha',
@@ -19,6 +23,8 @@ use Illuminate\Database\Eloquent\Model;
     'gu_obs', 'gu_hernias', 'gu_hidrocele', 'gu_varicocele',
     'ext_sup_obs', 'ext_sup_manos', 'ext_inf_obs', 'ext_inf_hallux_valgus', 'reflejos_osteotendinosos',
     'psiquismo', 'padecimiento_actual',
+    // No incluye ta_conjunta, imc ni estado_nutricional: Postgres las calcula solo
+    // (columnas generadas) y la aplicacion nunca debe intentar escribirlas.
 ])]
 class HcExploracion extends Model
 {
@@ -32,9 +38,9 @@ class HcExploracion extends Model
 
     public $timestamps = false;
 
-    // ta_conjunta, imc y estado_nutricional son columnas generadas por Postgres
-    // (ver migracion) y por eso no aparecen en #[Fillable]: nunca se escriben desde la app.
-
+    /**
+     * Historia clinica a la que pertenece esta exploracion.
+     */
     public function historia()
     {
         return $this->belongsTo(HistoriaClinica::class, 'historia_id');

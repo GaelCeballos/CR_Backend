@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Exploracion fisica (075-133) — spec §2.3 / §5.2 / §5.4.
-     * ta_conjunta, imc y estado_nutricional son columnas generadas (stored) por Postgres.
+     * Crea la tabla hc_exploracion. ta_conjunta, imc y estado_nutricional son
+     * columnas generadas (stored) que Postgres calcula solo a partir de los
+     * signos vitales y peso/talla capturados.
      */
     public function up(): void
     {
@@ -25,7 +26,7 @@ return new class extends Migration
             $table->rawColumn('ta_sistolica', 'numeric')->nullable();
             $table->rawColumn('ta_diastolica', 'numeric')->nullable();
             $table->text('ta_conjunta')->nullable()->storedAs(
-                "case when ta_sistolica is not null and ta_diastolica is not null " .
+                'case when ta_sistolica is not null and ta_diastolica is not null '.
                 "then ta_sistolica::text || '/' || ta_diastolica::text end"
             );
             $table->string('clasificacion_aha')->nullable();
@@ -119,6 +120,9 @@ return new class extends Migration
         DB::statement('ALTER TABLE hc_exploracion ADD CONSTRAINT talla_rango CHECK (talla IS NULL OR talla BETWEEN 0.3 AND 3)');
     }
 
+    /**
+     * Elimina la tabla hc_exploracion.
+     */
     public function down(): void
     {
         Schema::dropIfExists('hc_exploracion');

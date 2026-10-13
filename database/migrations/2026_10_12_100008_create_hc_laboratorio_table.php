@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Laboratorio (134-179) — valores de texto libre, el medico puede escribir "95 mg/dL", "NEGATIVO", etc.
+     * Crea la tabla hc_laboratorio. Los valores son texto libre: el medico puede
+     * escribir "95 mg/dL", "NEGATIVO", etc.
      */
     public function up(): void
     {
@@ -71,6 +72,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Elimina la tabla hc_laboratorio.
+     */
     public function down(): void
     {
         Schema::dropIfExists('hc_laboratorio');

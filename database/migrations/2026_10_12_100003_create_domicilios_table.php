@@ -8,9 +8,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Instantanea del domicilio vigente al momento del examen (spec §2.1, §2.3).
-     * No lleva columna de codigo postal: el CP solo es un asistente de captura
-     * (ver /api/v1/inegi/cp/{cp}) y nunca se persiste junto al domicilio.
+     * Crea la tabla domicilios. No lleva columna de codigo postal: el CP solo
+     * se usa en el frontend para ayudar a escribir el domicilio, nunca se guarda.
      */
     public function up(): void
     {
@@ -25,6 +24,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Elimina la tabla domicilios.
+     */
     public function down(): void
     {
         Schema::dropIfExists('domicilios');
