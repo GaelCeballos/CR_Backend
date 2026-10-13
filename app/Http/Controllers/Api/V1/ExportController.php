@@ -19,11 +19,11 @@ class ExportController extends Controller
      * Get: da todos los expedientes de una jornada (por defecto, hoy en
      * zona Mexico): los que se realizaron ese dia, o los que se editaron
      * ese dia aunque se hayan realizado antes. Usa la misma forma que
-     * GET /expedientes/{folio} (incluye quien creo/edito cada uno), para
+     * GET /expedientes/{clave} (incluye quien creo/edito cada uno), para
      * que el Excel pueda llenar esas columnas.
      *
      * @param  Request  $request  ?fecha=AAAA-MM-DD, opcional
-     * @return JsonResponse la fecha de la jornada y sus expedientes, ordenados por folio
+     * @return JsonResponse la fecha de la jornada y sus expedientes, ordenados por año y folio
      */
     public function excelData(Request $request)
     {
@@ -36,7 +36,8 @@ class ExportController extends Controller
                 'paciente', 'domicilio', 'creador', 'editor',
                 'antecedentes', 'historiaLaboral', 'exploracion', 'laboratorio', 'audiometria', 'gabinete',
             ])
-            ->orderBy('folio')
+            ->orderBy('anio')
+            ->orderBy('folio_anual')
             ->get();
 
         return response()->json([

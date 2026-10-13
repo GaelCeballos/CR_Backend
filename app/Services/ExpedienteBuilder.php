@@ -23,6 +23,7 @@ class ExpedienteBuilder
         private PacienteUpsertService $pacientes,
         private CalculoClinicoService $calculos,
         private GradienteService $gradiente,
+        private FolioAnualService $folios,
     ) {}
 
     /**
@@ -41,10 +42,12 @@ class ExpedienteBuilder
             $domicilio = $this->pacientes->domicilioVigente($paciente, $this->datosDomicilio($payload));
 
             $fechaEstudios = now('America/Mexico_City')->toDateString();
+            $anio = (int) substr($fechaEstudios, 0, 4);
 
             $historia = HistoriaClinica::create($this->datosHistoria($payload, $paciente->fecha_nacimiento, $fechaEstudios) + [
                 'paciente_id' => $paciente->id,
                 'domicilio_id' => $domicilio?->id,
+                'folio_anual' => $this->folios->siguiente($anio),
                 'creado_por' => $usuario->id,
                 'actualizado_por' => $usuario->id,
             ]);
@@ -102,7 +105,11 @@ class ExpedienteBuilder
     public function instantanea(HistoriaClinica $historia): array
     {
         $plano = [
-            'folio' => $historia->folio,
+            // "folio" se mantiene como alias de folio_anual: es el nombre de columna
+            // que ya usan toDbPayload/EtiquetasCampoExpediente en el resto del codigo.
+            'folio' => $historia->folio_anual,
+            'anio' => $historia->anio,
+            'folio_anual' => $historia->folio_anual,
             'fecha_estudios' => optional($historia->fecha_estudios)->toDateString(),
             'nombre_completo' => $historia->paciente?->nombre_completo,
             'curp' => $historia->paciente?->curp,
@@ -325,7 +332,7 @@ class ExpedienteBuilder
         // Estas columnas se derivan automaticamente de otras (peso/talla, fecha
         // de nacimiento): si cambian es solo consecuencia de un campo ya listado,
         // asi que no deben aparecer como un cambio aparte.
-        $calculadas = ['ta_conjunta', 'imc', 'estado_nutricional', 'edad', 'grupo_edad', 'folio', 'fecha_estudios'];
+        $calculadas = ['ta_conjunta', 'imc', 'estado_nutricional', 'edad', 'grupo_edad', 'folio', 'anio', 'folio_anual', 'fecha_estudios'];
 
         $cambios = [];
 

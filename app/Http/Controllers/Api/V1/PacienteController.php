@@ -51,8 +51,8 @@ class PacienteController extends Controller
      * los datos fijos de su visita mas reciente, para precargar un expediente
      * nuevo.
      *
-     * @param  Request  $request  curp y/o nss, y opcionalmente excluir_folio
-     * @return JsonResponse paciente_id, ultimo_folio y los datos fijos
+     * @param  Request  $request  curp y/o nss, y opcionalmente excluir_clave ("{anio}-{folio_anual}")
+     * @return JsonResponse paciente_id, ultimo_folio/ultimo_anio y los datos fijos
      */
     public function lookup(Request $request)
     {
@@ -73,15 +73,25 @@ class PacienteController extends Controller
             throw new NotFoundApiException('No se encontró ningún paciente con ese identificador.');
         }
 
+        $excluirClave = $request->query('excluir_clave');
+        $excluirAnio = $excluirFolio = null;
+
+        if ($excluirClave && preg_match('/^(\d{4})-(\d+)$/', $excluirClave, $partes)) {
+            [$excluirAnio, $excluirFolio] = [(int) $partes[1], (int) $partes[2]];
+        }
+
         $ultimaHistoria = $paciente->historias()
             ->with('domicilio')
-            ->when($request->query('excluir_folio'), fn ($q, $folio) => $q->where('folio', '!=', $folio))
+            ->when($excluirAnio !== null, fn ($q) => $q->where(fn ($q2) => $q2
+                ->where('anio', '!=', $excluirAnio)
+                ->orWhere('folio_anual', '!=', $excluirFolio)))
             ->latest('updated_at')
             ->first();
 
         return response()->json([
             'paciente_id' => $paciente->id,
-            'ultimo_folio' => $ultimaHistoria?->folio,
+            'ultimo_folio' => $ultimaHistoria?->folio_anual,
+            'ultimo_anio' => $ultimaHistoria?->anio,
             'datos' => [
                 'nombre_completo' => $paciente->nombre_completo,
                 'fecha_nacimiento' => optional($paciente->fecha_nacimiento)->toDateString(),

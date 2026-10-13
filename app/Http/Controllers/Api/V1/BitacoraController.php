@@ -39,7 +39,7 @@ class BitacoraController extends Controller
                     ->orWhere('paciente', 'ilike', "%{$q}%");
 
                 if (ctype_digit($q)) {
-                    $consulta->orWhere('folio', (int) $q);
+                    $consulta->orWhere('folio_anual', (int) $q);
                 }
             });
         }
@@ -54,7 +54,8 @@ class BitacoraController extends Controller
                 'fecha' => $e->fecha->toIso8601String(),
                 'usuario_nombre' => $e->usuario_nombre,
                 'accion' => $e->accion->value,
-                'folio' => $e->folio,
+                'anio' => $e->anio,
+                'folio' => $e->folio_anual,
                 'paciente' => $e->paciente,
                 'detalle' => $e->detalle,
             ]),

@@ -29,7 +29,8 @@ class AuditoriaService
             'usuario_nombre' => $usuario->nombre_completo,
             'accion' => $accion,
             'historia_id' => $historia->id,
-            'folio' => $historia->folio,
+            'anio' => $historia->anio,
+            'folio_anual' => $historia->folio_anual,
             'paciente' => $historia->paciente?->nombre_completo,
             'detalle' => $detalle,
         ]);
