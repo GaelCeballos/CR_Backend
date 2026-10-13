@@ -51,7 +51,7 @@ class ExpedienteController extends Controller
         $historia = $this->builder->crear($request->validated(), $usuario);
 
         $motivo = $historia->tipo_examen_motivo ?? 'sin motivo capturado';
-        $this->bitacora->registrar($usuario, AccionAuditoria::CreacionDeFolio, $historia, "Nueva historia clínica · {$motivo}");
+        $this->bitacora->registrar($usuario, AccionAuditoria::CreacionDeFolio, $historia, "Nueva historia clinica · {$motivo}");
 
         return response()->json(new ExpedienteResource($historia), 201);
     }
