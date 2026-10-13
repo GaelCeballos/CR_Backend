@@ -9,16 +9,22 @@ RUN apk add --no-cache \
         icu-dev \
         oniguruma-dev \
         libzip-dev \
+        libpng-dev \
+        freetype-dev \
+        libjpeg-turbo-dev \
         $PHPIZE_DEPS
 
-# Extensiones de PHP requeridas por la aplicacion (Postgres, Intl para catalogos, bcmath, zip, opcache)
+# Extensiones de PHP requeridas por la aplicacion (Postgres, Intl para catalogos, bcmath, zip,
+# opcache, gd lo exige phpoffice/phpspreadsheet para el comando de importacion historica)
 RUN docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_pgsql \
         pgsql \
         intl \
         bcmath \
         zip \
+        gd \
         opcache
 
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini

@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\ReseteaSecuenciaFolio;
 use Tests\TestCase;
 
 /**
@@ -14,7 +13,6 @@ use Tests\TestCase;
 class PacientesTest extends TestCase
 {
     use RefreshDatabase;
-    use ReseteaSecuenciaFolio;
 
     /**
      * Crea un expediente base para que exista un paciente que buscar.

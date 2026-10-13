@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * audiometria) viven en tablas aparte relacionadas por historia_id.
  */
 #[Fillable([
-    'paciente_id', 'domicilio_id', 'medico_id', 'folio_anual',
+    'paciente_id', 'domicilio_id', 'medico_id', 'folio_anual', 'fecha_estudios',
     'puesto', 'empresa', 'zona_trabajo', 'tipo_examen_motivo', 'antiguedad_empresa',
     'antiguedad_puesto', 'exposicion_poe', 'area', 'tipo_examen_categoria',
     'edad', 'grupo_edad', 'telefono', 'religion', 'estado_civil',

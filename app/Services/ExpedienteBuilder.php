@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\CamposExpediente;
 use App\Support\EtiquetasCampoExpediente;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -53,6 +54,52 @@ class ExpedienteBuilder
             ]);
 
             $this->guardarModulos($historia, $payload);
+
+            return $historia->load($this->relaciones());
+        });
+    }
+
+    /**
+     * Crea un expediente para la importación histórica: a diferencia de
+     * crear(), el folio_anual y la fecha_estudios los da la fila de origen
+     * (no el sistema), y la marca de tiempo de creación/edición se fija a la
+     * fecha del examen en vez de "ahora".
+     *
+     * @param  array<string, mixed>  $payload  columnas planas ya normalizadas de la fila importada
+     * @param  User  $usuario  cuenta a la que se le atribuye la importación (admin)
+     * @param  int  $folioAnual  folio de la hoja original, usado tal cual
+     * @param  string|null  $fechaEstudios  fecha de los estudios (AAAA-MM-DD), o null si la fila no la capturó
+     * @return HistoriaClinica el expediente recién creado, con sus relaciones cargadas
+     */
+    public function importar(array $payload, User $usuario, int $folioAnual, ?string $fechaEstudios): HistoriaClinica
+    {
+        return DB::transaction(function () use ($payload, $usuario, $folioAnual, $fechaEstudios) {
+            $paciente = $this->pacientes->upsert(Arr::only($payload, CamposExpediente::paciente()));
+            $domicilio = $this->pacientes->domicilioVigente($paciente, $this->datosDomicilio($payload));
+
+            $fechaParaEdad = $fechaEstudios ?? now('America/Mexico_City')->toDateString();
+            $datos = $this->datosHistoria($payload, $paciente->fecha_nacimiento, $fechaParaEdad) + [
+                'paciente_id' => $paciente->id,
+                'domicilio_id' => $domicilio?->id,
+                'folio_anual' => $folioAnual,
+                'creado_por' => $usuario->id,
+                'actualizado_por' => $usuario->id,
+            ];
+
+            if ($fechaEstudios !== null) {
+                $datos['fecha_estudios'] = $fechaEstudios;
+            }
+
+            $historia = HistoriaClinica::create($datos);
+
+            $this->guardarModulos($historia, $payload);
+
+            // La marca de tiempo de creacion/edicion refleja la fecha real del
+            // examen (mediodia, zona Mexico), no el momento de la importacion.
+            $marca = Carbon::parse($fechaParaEdad, 'America/Mexico_City')->setTime(12, 0);
+            $historia->timestamps = false;
+            $historia->forceFill(['created_at' => $marca, 'updated_at' => $marca])->save();
+            $historia->timestamps = true;
 
             return $historia->load($this->relaciones());
         });

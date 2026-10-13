@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\ReseteaSecuenciaFolio;
 use Tests\TestCase;
 
 /**
@@ -14,7 +13,12 @@ use Tests\TestCase;
 class ExportTest extends TestCase
 {
     use RefreshDatabase;
-    use ReseteaSecuenciaFolio;
+
+    /** Clave de ruta "{anio}-{folio_anual}" para un folio creado hoy en una prueba. */
+    private function clave(int $folioAnual): string
+    {
+        return now('America/Mexico_City')->year."-{$folioAnual}";
+    }
 
     /**
      * Crea un expediente de prueba, autenticado como el medico dado.
@@ -37,7 +41,7 @@ class ExportTest extends TestCase
         $this->crearExpediente($medico);
 
         $this->actingAsUsuario($medico)
-            ->getJson('/api/v1/expedientes/1/pdf?plantilla=PECO')
+            ->getJson('/api/v1/expedientes/'.$this->clave(1).'/pdf?plantilla=PECO')
             ->assertStatus(403);
 
         $this->actingAsUsuario($medico)
@@ -56,14 +60,15 @@ class ExportTest extends TestCase
         $this->crearExpediente($medico);
 
         $respuesta = $this->actingAsUsuario($admin)
-            ->getJson('/api/v1/expedientes/1/pdf?plantilla=PECO');
+            ->getJson('/api/v1/expedientes/'.$this->clave(1).'/pdf?plantilla=PECO');
 
         $respuesta->assertStatus(200)
             ->assertJsonPath('plantilla', 'PECO')
             ->assertJsonPath('folio', 1);
 
         $this->assertDatabaseHas('auditoria', [
-            'folio' => 1,
+            'anio' => now('America/Mexico_City')->year,
+            'folio_anual' => 1,
             'accion' => 'Consulta',
             'detalle' => 'Descarga de datos para PDF (PECO)',
         ]);
