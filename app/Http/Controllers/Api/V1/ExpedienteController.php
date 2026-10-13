@@ -75,15 +75,18 @@ class ExpedienteController extends Controller
         $query = HistoriaClinica::query()->with(['paciente', 'editor']);
 
         if ($q = trim((string) $request->query('q', ''))) {
-            $query->where(function ($consulta) use ($q) {
-                $consulta->whereHas('paciente', fn ($p) => $p->where('nombre_completo', 'ilike', "%{$q}%")
-                    ->orWhere('curp', 'ilike', "%{$q}%"))
-                    ->orWhere('empresa', 'ilike', "%{$q}%");
-
-                if (ctype_digit($q)) {
-                    $consulta->orWhere('folio_anual', (int) $q);
-                }
-            });
+            if (ctype_digit($q)) {
+                // Un texto puramente numerico se interpreta como folio exacto, no como
+                // subcadena de CURP/nombre/empresa (si no, un folio real queda sepultado
+                // entre cientos de coincidencias de CURPs que solo comparten ese digito).
+                $query->where('folio_anual', (int) $q);
+            } else {
+                $query->where(function ($consulta) use ($q) {
+                    $consulta->whereHas('paciente', fn ($p) => $p->where('nombre_completo', 'ilike', "%{$q}%")
+                        ->orWhere('curp', 'ilike', "%{$q}%"))
+                        ->orWhere('empresa', 'ilike', "%{$q}%");
+                });
+            }
         }
 
         if ($desde = $request->query('desde')) {
