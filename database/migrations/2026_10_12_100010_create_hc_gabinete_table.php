@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Gabinete (180-181, 200-203).
+     * Crea la tabla hc_gabinete: radiografias, resultado de audiometria resumido,
+     * ECG, espirometria y valoracion oftalmologica de una historia clinica.
      */
     public function up(): void
     {
@@ -24,6 +25,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Elimina la tabla hc_gabinete.
+     */
     public function down(): void
     {
         Schema::dropIfExists('hc_gabinete');

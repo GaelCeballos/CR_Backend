@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Resultados de laboratorio de una historia clinica: quimica sanguinea, biometria
+ * hematica, antidoping y examen general de orina (relacion 1 a 1).
+ */
 #[Fillable([
     'historia_id',
     'qs_glucosa', 'qs_urea', 'qs_creatinina', 'qs_acido_urico', 'qs_colesterol', 'qs_trigliceridos',
@@ -29,6 +33,9 @@ class HcLaboratorio extends Model
 
     public $timestamps = false;
 
+    /**
+     * Historia clinica a la que pertenecen estos resultados de laboratorio.
+     */
     public function historia()
     {
         return $this->belongsTo(HistoriaClinica::class, 'historia_id');

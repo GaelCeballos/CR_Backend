@@ -8,10 +8,16 @@ use Closure;
 use Illuminate\Http\Request;
 
 /**
- * Una cuenta inactiva no puede usar ningun endpoint, aunque su token siga vigente (spec §5.6).
+ * Bloquea cualquier endpoint si la cuenta autenticada esta inactiva, aunque su
+ * token siga vigente.
  */
 class EnsureActiveUser
 {
+    /**
+     * @param  Request  $request  peticion entrante, ya autenticada por auth:sanctum
+     * @param  Closure  $next  siguiente paso del pipeline de middleware
+     * @return mixed la respuesta del siguiente middleware/controlador, o un error 403
+     */
     public function handle(Request $request, Closure $next)
     {
         $usuario = $request->user();

@@ -7,16 +7,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Crea la tabla historias_clinicas: folio consecutivo, fecha de estudios
+     * automatica y los datos de la visita (puesto, empresa, dictamen, etc.).
+     */
     public function up(): void
     {
         Schema::create('historias_clinicas', function (Blueprint $table) {
             $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
 
-            // 001 Folio: consecutivo, asignado por la BD (columna identity de Postgres).
-            $table->bigInteger('folio')->generatedAs()->always()->unique();
-
             // 002 Fecha de realizacion: fecha del dia de creacion en zona Mexico, de solo lectura.
             $table->date('fecha_estudios')->default(DB::raw("(now() at time zone 'America/Mexico_City')::date"));
+
+            // El historial se respalda y se borra cada año, asi que el folio (001) ya no es un
+            // identificador global: "anio" sale de fecha_estudios, y "folio_anual" es el numero
+            // operativo dentro de ese año (lo asigna la aplicacion, ver FolioAnualService). El
+            // folio #1 puede existir en 2026 y otra vez en 2027 sin chocar.
+            $table->smallInteger('anio')->storedAs('extract(year from fecha_estudios)');
+            $table->bigInteger('folio_anual');
 
             $table->foreignUuid('paciente_id')->references('id')->on('pacientes');
             $table->foreignUuid('domicilio_id')->nullable()->references('id')->on('domicilios');
@@ -65,12 +73,16 @@ return new class extends Migration
             $table->index('tipo_examen_motivo', 'hc_motivo_idx');
         });
 
+        DB::statement('ALTER TABLE historias_clinicas ADD CONSTRAINT historias_clinicas_anio_folio_anual_unique UNIQUE (anio, folio_anual)');
         DB::statement('ALTER TABLE historias_clinicas ADD CONSTRAINT edad_rango CHECK (edad IS NULL OR edad BETWEEN 0 AND 120)');
         DB::statement('ALTER TABLE historias_clinicas ADD CONSTRAINT gradiente_rango CHECK (gradiente IS NULL OR gradiente BETWEEN 1 AND 4)');
         DB::statement("ALTER TABLE historias_clinicas ADD CONSTRAINT tipo_empleado_fijo CHECK (tipo_empleado = 'CONTRATISTA')");
         DB::statement('ALTER TABLE historias_clinicas ADD CONSTRAINT r2_fecha_o_no_apto CHECK (NOT (no_apto AND fecha_siguiente_valoracion IS NOT NULL))');
     }
 
+    /**
+     * Elimina la tabla historias_clinicas.
+     */
     public function down(): void
     {
         Schema::dropIfExists('historias_clinicas');

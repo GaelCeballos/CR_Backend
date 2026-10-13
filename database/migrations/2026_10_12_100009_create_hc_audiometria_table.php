@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Audiometria (182-199): oido x frecuencia, normalizada en filas.
+     * Crea la tabla hc_audiometria: un umbral en dB por cada combinacion de
+     * oido y frecuencia (hasta 18 filas por historia clinica).
      */
     public function up(): void
     {
@@ -25,6 +26,9 @@ return new class extends Migration
         DB::statement('ALTER TABLE hc_audiometria ADD CONSTRAINT umbral_rango CHECK (umbral_db BETWEEN -10 AND 120)');
     }
 
+    /**
+     * Elimina la tabla hc_audiometria.
+     */
     public function down(): void
     {
         Schema::dropIfExists('hc_audiometria');
