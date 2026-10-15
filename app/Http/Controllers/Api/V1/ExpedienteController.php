@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccionAuditoria;
+use App\Enums\RolUsuario;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreExpedienteRequest;
 use App\Http\Requests\UpdateExpedienteRequest;
@@ -72,7 +73,7 @@ class ExpedienteController extends Controller
         $pageSize = (int) $request->query('page_size', 12);
         $page = (int) $request->query('page', 1);
 
-        $query = HistoriaClinica::query()->with(['paciente', 'editor']);
+        $query = HistoriaClinica::query()->with(['paciente', 'editor', 'medico']);
 
         if ($q = trim((string) $request->query('q', ''))) {
             if (ctype_digit($q)) {
@@ -105,6 +106,21 @@ class ExpedienteController extends Controller
             $query->where('empresa', 'ilike', "%{$empresa}%");
         }
 
+        // Servicios Médicos SIEMPRE queda forzado a sus propias atenciones, sin
+        // importar qué medico_id mande el cliente: la restricción real vive aquí,
+        // no en el frontend. Solo un admin puede ver "todos" o elegir a cualquiera.
+        $medicoId = $request->user()->rol === RolUsuario::Admin
+            ? $request->query('medico_id')
+            : $request->user()->id;
+
+        if ($medicoId) {
+            $query->where('medico_id', $medicoId);
+        }
+
+        if ($request->boolean('solo_examenes_visuales')) {
+            $query->whereHas('exploracion', fn ($q) => $q->where('examenes_visuales_realizados', true));
+        }
+
         $total = $query->count();
 
         $historias = $query->with('exploracion')
@@ -121,15 +137,34 @@ class ExpedienteController extends Controller
                 'fecha_estudios' => optional($h->fecha_estudios)->toDateString(),
                 'nombre_completo' => $h->paciente?->nombre_completo,
                 'curp' => $h->paciente?->curp,
+                'nss' => $h->paciente?->nss,
                 'empresa' => $h->empresa,
+                'zona_trabajo' => $h->zona_trabajo,
                 'tipo_examen_motivo' => $h->tipo_examen_motivo,
                 'examenes_visuales_realizados' => (bool) $h->exploracion?->examenes_visuales_realizados,
+                'medico' => $h->medico?->nombre_completo,
+                'gradiente' => $h->gradiente,
+                'no_apto' => (bool) $h->no_apto,
                 'updated_at' => $h->updated_at?->toIso8601String(),
                 'actualizado_por' => $h->editor?->nombre_completo,
             ]),
             'total' => $total,
             'page' => $page,
             'page_size' => $pageSize,
+        ]);
+    }
+
+    /**
+     * Get: empresas distintas capturadas en algún expediente, para el filtro
+     * desplegable del Reporte SABI.
+     *
+     * @return JsonResponse lista de empresas, alfabética
+     */
+    public function empresas()
+    {
+        return response()->json([
+            'items' => HistoriaClinica::whereNotNull('empresa')->where('empresa', '!=', '')
+                ->distinct()->orderBy('empresa')->pluck('empresa'),
         ]);
     }
 
