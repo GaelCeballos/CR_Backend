@@ -35,6 +35,14 @@ class BitacoraTest extends TestCase
         $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', [
             'nombre_completo' => 'Garcia Lopez Juan Carlos',
             'curp' => 'GALJ850312HCMRPN09',
+            'empresa' => 'CONSORCIO MINERO DEMO',
+            'bh_grupo_rh' => 'O POSITIVO',
+            'ad_opi' => 'NO REACTIVO',
+            'ad_coc' => 'NO REACTIVO',
+            'ad_thc' => 'NO REACTIVO',
+            'ad_bzo' => 'NO REACTIVO',
+            'ad_met' => 'NO REACTIVO',
+            'ad_amp' => 'NO REACTIVO',
         ]);
 
         $respuesta = $this->actingAsUsuario($admin)->getJson('/api/v1/bitacora');

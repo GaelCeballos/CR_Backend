@@ -101,9 +101,14 @@ class ExpedienteController extends Controller
             $query->where('tipo_examen_motivo', $tipo);
         }
 
+        if ($empresa = $request->query('empresa')) {
+            $query->where('empresa', 'ilike', "%{$empresa}%");
+        }
+
         $total = $query->count();
 
-        $historias = $query->orderByDesc('updated_at')
+        $historias = $query->with('exploracion')
+            ->orderByDesc('updated_at')
             ->forPage($page, $pageSize)
             ->get();
 
@@ -118,6 +123,7 @@ class ExpedienteController extends Controller
                 'curp' => $h->paciente?->curp,
                 'empresa' => $h->empresa,
                 'tipo_examen_motivo' => $h->tipo_examen_motivo,
+                'examenes_visuales_realizados' => (bool) $h->exploracion?->examenes_visuales_realizados,
                 'updated_at' => $h->updated_at?->toIso8601String(),
                 'actualizado_por' => $h->editor?->nombre_completo,
             ]),
@@ -226,6 +232,24 @@ class ExpedienteController extends Controller
             (new ExpedienteResource($historia))->resolve($request),
             ['plantilla' => $plantilla],
         ));
+    }
+
+    /**
+     * Post: estampa la fecha de entrega de resultados con el momento actual
+     * (zona Mexico), justo antes de que el frontend genere el PDF oficial.
+     * Solo toca esta columna (no cuenta como una edición completa del
+     * expediente, así que no se registra en la bitácora de "Edición").
+     *
+     * @param  string  $clave  clave de ruta "{anio}-{folio_anual}" (p. ej. "2026-6")
+     * @return JsonResponse la fecha recién estampada
+     */
+    public function marcarEntrega(string $clave)
+    {
+        $historia = $this->resolverHistoria($clave);
+        $fecha = Carbon::now('America/Mexico_City')->toDateString();
+        $historia->update(['fecha_entrega_resultados' => $fecha]);
+
+        return response()->json(['fecha_entrega_resultados' => $fecha]);
     }
 
     /**

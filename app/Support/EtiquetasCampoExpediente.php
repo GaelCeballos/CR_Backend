@@ -107,6 +107,7 @@ final class EtiquetasCampoExpediente
         'ishihara' => '111 Diferenciación de colores (Ishihara)',
         'oftal_recomendaciones' => '112 Oftalmología: recomendaciones',
         'lentes_seguridad' => '113 Lentes de seguridad graduados',
+        'examenes_visuales_realizados' => 'R6 Exámenes visuales realizados',
         'canal_auditivo_od' => '114 Canal auditivo: oído derecho',
         'canal_auditivo_oi' => '115 Canal auditivo: oído izquierdo',
         'membrana_timpanica_d' => '116 Membrana timpánica derecha',

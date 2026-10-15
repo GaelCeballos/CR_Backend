@@ -6,6 +6,7 @@ use App\Exceptions\NotFoundApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use App\Services\CalculoClinicoService;
+use App\Support\CamposExpediente;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -47,12 +48,15 @@ class PacienteController extends Controller
     }
 
     /**
-     * Get: busca un paciente recurrente por CURP o NSS exactos y devuelve
-     * los datos fijos de su visita mas reciente, para precargar un expediente
-     * nuevo.
+     * Get: busca un paciente recurrente por CURP o NSS exactos y devuelve los
+     * datos fijos de su visita mas reciente, mas Antecedentes, Historia
+     * Laboral, Exploracion Fisica y el texto de Diagnostico de esa misma
+     * visita (para precargar un expediente nuevo). A proposito NO incluye
+     * Laboratoriales ni Audiometria/Gabinete: esos siempre se capturan desde
+     * cero en cada visita.
      *
      * @param  Request  $request  curp y/o nss, y opcionalmente excluir_clave ("{anio}-{folio_anual}")
-     * @return JsonResponse paciente_id, ultimo_folio/ultimo_anio y los datos fijos
+     * @return JsonResponse paciente_id, ultimo_folio/ultimo_anio y los datos a precargar
      */
     public function lookup(Request $request)
     {
@@ -81,31 +85,51 @@ class PacienteController extends Controller
         }
 
         $ultimaHistoria = $paciente->historias()
-            ->with('domicilio')
+            ->with(['domicilio', 'antecedentes', 'historiaLaboral', 'exploracion'])
             ->when($excluirAnio !== null, fn ($q) => $q->where(fn ($q2) => $q2
                 ->where('anio', '!=', $excluirAnio)
                 ->orWhere('folio_anual', '!=', $excluirFolio)))
             ->latest('updated_at')
             ->first();
 
+        $datos = [
+            'nombre_completo' => $paciente->nombre_completo,
+            'fecha_nacimiento' => optional($paciente->fecha_nacimiento)->toDateString(),
+            'genero' => $paciente->genero,
+            'curp' => $paciente->curp,
+            'nss' => $paciente->nss,
+            'domicilio_calle' => $ultimaHistoria?->domicilio?->calle,
+            'domicilio_colonia' => $ultimaHistoria?->domicilio?->colonia,
+            'domicilio_municipio' => $ultimaHistoria?->domicilio?->municipio,
+            'domicilio_estado' => $ultimaHistoria?->domicilio?->estado,
+            'telefono' => $ultimaHistoria?->telefono,
+            'empresa' => $ultimaHistoria?->empresa,
+            'puesto' => $ultimaHistoria?->puesto,
+            'diagnostico' => $ultimaHistoria?->diagnostico,
+        ];
+
+        foreach (CamposExpediente::antecedentes() as $columna) {
+            $datos[$columna] = $ultimaHistoria?->antecedentes?->{$columna};
+        }
+
+        foreach (CamposExpediente::exploracion() as $columna) {
+            $datos[$columna] = $ultimaHistoria?->exploracion?->{$columna};
+        }
+
+        $historiaLaboralPorOrden = $ultimaHistoria?->historiaLaboral->keyBy('orden') ?? collect();
+
+        foreach (CamposExpediente::ordenesHistoriaLaboral() as ['orden' => $orden, 'prefijo' => $prefijo]) {
+            $fila = $historiaLaboralPorOrden->get($orden);
+            foreach (['empresa', 'puesto', 'tiempo', 'condiciones'] as $campo) {
+                $datos["{$prefijo}{$campo}"] = $fila?->{$campo};
+            }
+        }
+
         return response()->json([
             'paciente_id' => $paciente->id,
             'ultimo_folio' => $ultimaHistoria?->folio_anual,
             'ultimo_anio' => $ultimaHistoria?->anio,
-            'datos' => [
-                'nombre_completo' => $paciente->nombre_completo,
-                'fecha_nacimiento' => optional($paciente->fecha_nacimiento)->toDateString(),
-                'genero' => $paciente->genero,
-                'curp' => $paciente->curp,
-                'nss' => $paciente->nss,
-                'domicilio_calle' => $ultimaHistoria?->domicilio?->calle,
-                'domicilio_colonia' => $ultimaHistoria?->domicilio?->colonia,
-                'domicilio_municipio' => $ultimaHistoria?->domicilio?->municipio,
-                'domicilio_estado' => $ultimaHistoria?->domicilio?->estado,
-                'telefono' => $ultimaHistoria?->telefono,
-                'empresa' => $ultimaHistoria?->empresa,
-                'puesto' => $ultimaHistoria?->puesto,
-            ],
+            'datos' => $datos,
         ]);
     }
 

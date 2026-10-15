@@ -100,6 +100,7 @@ class StoreExpedienteRequest extends FormRequest
             'lentes_seguridad' => ['nullable', Rule::in([
                 'PX NO NECESITA LENTES GRADUADOS DE SEGURIDAD', 'PX REQUIERE LENTES GRADUADOS DE SEGURIDAD',
             ])],
+            'examenes_visuales_realizados' => ['nullable', 'boolean'],
             'bh_grupo_rh' => ['required', Rule::in([
                 'O POSITIVO', 'O NEGATIVO', 'A POSITIVO', 'A NEGATIVO',
                 'B POSITIVO', 'B NEGATIVO', 'AB POSITIVO', 'AB NEGATIVO',
@@ -134,6 +135,12 @@ class StoreExpedienteRequest extends FormRequest
             'nss.required_without' => 'Escribe el NSS o la CURP del paciente.',
             'empresa.required' => 'La empresa es obligatoria.',
             'bh_grupo_rh.required' => 'Selecciona el tipo de sangre.',
+            'ad_opi.required' => 'Selecciona un resultado de Opiáceos (OPI).',
+            'ad_coc.required' => 'Selecciona un resultado de Cocaína (COC).',
+            'ad_thc.required' => 'Selecciona un resultado de Cannabinoides (THC).',
+            'ad_bzo.required' => 'Selecciona un resultado de Benzodiacepinas (BZO).',
+            'ad_met.required' => 'Selecciona un resultado de Metanfetaminas (MET).',
+            'ad_amp.required' => 'Selecciona un resultado de Anfetaminas (AMP).',
         ];
     }
 }
