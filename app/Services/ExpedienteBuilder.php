@@ -195,6 +195,8 @@ class ExpedienteBuilder
         foreach (CamposExpediente::exploracion() as $columna) {
             $plano[$columna] = $historia->exploracion?->{$columna};
         }
+        // Booleano: el frontend representa "marcado/sin marcar" como '1'/'' (no true/false).
+        $plano['examenes_visuales_realizados'] = $historia->exploracion?->examenes_visuales_realizados ? '1' : '';
         $plano['ta_conjunta'] = $historia->exploracion?->ta_conjunta;
         $plano['imc'] = $historia->exploracion?->imc;
         $plano['estado_nutricional'] = $historia->exploracion?->estado_nutricional;

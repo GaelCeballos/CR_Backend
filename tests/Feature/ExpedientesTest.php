@@ -41,6 +41,13 @@ class ExpedientesTest extends TestCase
             'ta_diastolica' => '82',
             'gradiente' => '2',
             'fecha_siguiente_valoracion' => 'NO APTO',
+            'bh_grupo_rh' => 'O POSITIVO',
+            'ad_opi' => 'NO REACTIVO',
+            'ad_coc' => 'NO REACTIVO',
+            'ad_thc' => 'NO REACTIVO',
+            'ad_bzo' => 'NO REACTIVO',
+            'ad_met' => 'NO REACTIVO',
+            'ad_amp' => 'NO REACTIVO',
         ];
     }
 

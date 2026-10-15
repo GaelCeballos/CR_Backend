@@ -47,6 +47,7 @@ Route::prefix('v1')->group(function () {
                 // Sustituyen la descarga binaria de PDF/Excel: el frontend ya
                 // construye esos archivos; aqui solo se entregan los datos.
                 Route::get('expedientes/{clave}/pdf', [ExpedienteController::class, 'datosParaPdf']);
+                Route::post('expedientes/{clave}/entrega', [ExpedienteController::class, 'marcarEntrega']);
                 Route::get('export/excel', [ExportController::class, 'excelData']);
 
                 // Cierre y respaldo anual: el admin descarga el Excel completo

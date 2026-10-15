@@ -28,6 +28,13 @@ class PacientesTest extends TestCase
             'telefono' => '3121234567',
             'empresa' => 'CONSORCIO MINERO DEMO',
             'puesto' => 'OPERADOR',
+            'bh_grupo_rh' => 'O POSITIVO',
+            'ad_opi' => 'NO REACTIVO',
+            'ad_coc' => 'NO REACTIVO',
+            'ad_thc' => 'NO REACTIVO',
+            'ad_bzo' => 'NO REACTIVO',
+            'ad_met' => 'NO REACTIVO',
+            'ad_amp' => 'NO REACTIVO',
         ]);
     }
 
