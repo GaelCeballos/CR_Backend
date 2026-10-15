@@ -8,8 +8,10 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Valida el payload plano de un expediente (alta o edicion). Ningun campo
- * clinico es obligatorio: solo se valida el formato de los que si vienen.
+ * Valida el payload plano de un expediente (alta o edicion). La mayoria de
+ * los campos clinicos son opcionales (solo se valida el formato de los que
+ * si vienen); nombre, CURP/NSS, empresa, tipo de sangre y los 6 resultados
+ * de antidoping son obligatorios.
  */
 class StoreExpedienteRequest extends FormRequest
 {
@@ -56,11 +58,10 @@ class StoreExpedienteRequest extends FormRequest
         }
 
         return array_merge($reglas, [
-            // Los dos son opcionales por separado, pero no pueden faltar los dos a la vez:
-            // sin nombre hace falta la CURP, y sin CURP hace falta el nombre.
-            'nombre_completo' => ['nullable', 'required_without:curp', 'string', new NombrePersona],
-            'curp' => ['nullable', 'required_without:nombre_completo', 'string'],
-            'nss' => ['nullable', 'string'],
+            'nombre_completo' => ['required', 'string', new NombrePersona],
+            // CURP y NSS son opcionales por separado, pero no pueden faltar los dos a la vez.
+            'curp' => ['nullable', 'required_without:nss', 'string'],
+            'nss' => ['nullable', 'required_without:curp', 'string'],
             'fecha_nacimiento' => ['nullable', 'date'],
             'genero' => ['nullable', Rule::in(['MASCULINO', 'FEMENINO'])],
             'originario' => ['nullable', 'string'],
@@ -71,8 +72,10 @@ class StoreExpedienteRequest extends FormRequest
             'domicilio_estado' => ['nullable', 'string'],
 
             'puesto' => ['nullable', 'string'],
-            'empresa' => ['nullable', 'string'],
-            'zona_trabajo' => ['nullable', 'string'],
+            'empresa' => ['required', 'string'],
+            'zona_trabajo' => ['nullable', Rule::in([
+                'ALZADA', 'AQUILA', 'CLUB SOCIAL', 'COLIMA', 'MINA', 'NOVA', 'PALOMAS', 'PELET', 'PRESAS', 'TECOMÁN', 'TERNIUM',
+            ])],
             'tipo_examen_motivo' => ['nullable', Rule::in([
                 'INGRESO / EVALUACIÓN INICIAL', 'RENOVACIÓN ANUAL', 'CONTROL PERIÓDICO / SEGUIMIENTO',
             ])],
@@ -97,16 +100,16 @@ class StoreExpedienteRequest extends FormRequest
             'lentes_seguridad' => ['nullable', Rule::in([
                 'PX NO NECESITA LENTES GRADUADOS DE SEGURIDAD', 'PX REQUIERE LENTES GRADUADOS DE SEGURIDAD',
             ])],
-            'bh_grupo_rh' => ['nullable', Rule::in([
+            'bh_grupo_rh' => ['required', Rule::in([
                 'O POSITIVO', 'O NEGATIVO', 'A POSITIVO', 'A NEGATIVO',
                 'B POSITIVO', 'B NEGATIVO', 'AB POSITIVO', 'AB NEGATIVO',
             ])],
-            'ad_opi' => ['nullable', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
-            'ad_coc' => ['nullable', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
-            'ad_thc' => ['nullable', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
-            'ad_bzo' => ['nullable', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
-            'ad_met' => ['nullable', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
-            'ad_amp' => ['nullable', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
+            'ad_opi' => ['required', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
+            'ad_coc' => ['required', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
+            'ad_thc' => ['required', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
+            'ad_bzo' => ['required', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
+            'ad_met' => ['required', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
+            'ad_amp' => ['required', Rule::in(['NO REACTIVO', 'REACTIVO', 'NO REALIZADO'])],
 
             'peso' => ['nullable', 'string'],
             'talla' => ['nullable', 'string'],
@@ -126,8 +129,11 @@ class StoreExpedienteRequest extends FormRequest
     {
         return [
             'medico_dictaminador.exists' => 'El médico seleccionado no existe.',
-            'nombre_completo.required_without' => 'Escribe el nombre completo o la CURP del paciente.',
-            'curp.required_without' => 'Escribe la CURP o el nombre completo del paciente.',
+            'nombre_completo.required' => 'Escribe el nombre completo del paciente.',
+            'curp.required_without' => 'Escribe la CURP o el NSS del paciente.',
+            'nss.required_without' => 'Escribe el NSS o la CURP del paciente.',
+            'empresa.required' => 'La empresa es obligatoria.',
+            'bh_grupo_rh.required' => 'Selecciona el tipo de sangre.',
         ];
     }
 }
