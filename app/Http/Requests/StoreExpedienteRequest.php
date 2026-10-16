@@ -76,7 +76,8 @@ class StoreExpedienteRequest extends FormRequest
 
             'puesto' => ['required', 'string'],
             'empresa' => ['required', 'string'],
-            // Zona de trabajo y Área quedan opcionales (dejaron de ser obligatorias).
+            // Zona de trabajo, Área, Categoría del examen y Exposición (POE)
+            // quedan opcionales (dejaron de ser obligatorias).
             'zona_trabajo' => ['nullable', Rule::in([
                 'ALZADA', 'AQUILA', 'CLUB SOCIAL', 'COLIMA', 'MINA', 'NOVA', 'PALOMAS', 'PELET', 'PRESAS', 'TECOMÁN', 'TERNIUM',
             ])],
@@ -85,9 +86,9 @@ class StoreExpedienteRequest extends FormRequest
             ])],
             'antiguedad_empresa' => ['required', 'string'],
             'antiguedad_puesto' => ['required', 'string'],
-            'exposicion_poe' => ['required', 'string'],
+            'exposicion_poe' => ['nullable', 'string'],
             'area' => ['nullable', 'string'],
-            'tipo_examen_categoria' => ['required', Rule::in([
+            'tipo_examen_categoria' => ['nullable', Rule::in([
                 'PERSONAL GENERAL', 'OPERADORES', 'CAT B', 'CAT C', 'VISITA TEC',
             ])],
             'telefono' => ['required', 'string'],
@@ -144,9 +145,7 @@ class StoreExpedienteRequest extends FormRequest
             'tipo_examen_motivo.required' => 'Selecciona el motivo del examen.',
             'antiguedad_empresa.required' => 'La antigüedad en la empresa es obligatoria.',
             'antiguedad_puesto.required' => 'La antigüedad en el puesto es obligatoria.',
-            'exposicion_poe.required' => 'La exposición (POE) es obligatoria.',
             'genero.required' => 'Selecciona el género.',
-            'tipo_examen_categoria.required' => 'Selecciona la categoría del examen / puesto.',
             'fecha_nacimiento.required' => 'La fecha de nacimiento es obligatoria.',
             'domicilio_calle.required' => 'La calle y número son obligatorios.',
             'domicilio_colonia.required' => 'La colonia es obligatoria.',
