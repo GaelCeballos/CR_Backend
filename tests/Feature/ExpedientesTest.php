@@ -23,18 +23,34 @@ class ExpedientesTest extends TestCase
 
     /**
      * Datos minimos de un expediente nuevo, listos para extender en cada prueba.
+     * Incluye los campos de "Datos Generales" (obligatorios) y al propio
+     * medico como "medico_dictaminador" (tambien obligatorio).
      *
      * @return array<string, mixed>
      */
-    private function payloadBase(): array
+    private function payloadBase(User $medico): array
     {
         return [
             'nombre_completo' => 'Garcia Lopez Juan Carlos',
             'curp' => 'GALJ850312HCMRPN09',
             'fecha_nacimiento' => '1985-03-12',
             'genero' => 'MASCULINO',
+            'originario' => 'COLIMA',
+            'domicilio_calle' => 'AV REFORMA 123',
+            'domicilio_colonia' => 'CENTRO',
+            'domicilio_municipio' => 'COLIMA',
+            'domicilio_estado' => 'COLIMA',
+            'telefono' => '3121234567',
+            'religion' => 'Ninguna',
+            'estado_civil' => 'SOLTERO',
+            'puesto' => 'OPERADOR',
             'empresa' => 'CONSORCIO MINERO DEMO',
             'tipo_examen_motivo' => 'INGRESO / EVALUACIÓN INICIAL',
+            'tipo_examen_categoria' => 'PERSONAL GENERAL',
+            'antiguedad_empresa' => '2 AÑOS',
+            'antiguedad_puesto' => '1 AÑO',
+            'exposicion_poe' => 'NINGUNA',
+            'medico_dictaminador' => $medico->id,
             'peso' => '82',
             'talla' => '174',
             'ta_sistolica' => '124',
@@ -60,7 +76,7 @@ class ExpedientesTest extends TestCase
         $medico = User::factory()->create();
 
         $respuesta = $this->actingAsUsuario($medico)
-            ->postJson('/api/v1/expedientes', $this->payloadBase());
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico));
 
         $respuesta->assertStatus(201)
             ->assertJsonPath('folio', 1)
@@ -87,9 +103,9 @@ class ExpedientesTest extends TestCase
     {
         $medico = User::factory()->create();
 
-        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase());
+        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase($medico));
         $segundo = $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', array_merge(
-            $this->payloadBase(),
+            $this->payloadBase($medico),
             ['tipo_examen_motivo' => 'RENOVACIÓN ANUAL'],
         ));
 
@@ -103,7 +119,7 @@ class ExpedientesTest extends TestCase
     public function test_expediente_sin_nombre_ni_curp_es_invalido(): void
     {
         $medico = User::factory()->create();
-        $payload = $this->payloadBase();
+        $payload = $this->payloadBase($medico);
         unset($payload['nombre_completo'], $payload['curp']);
 
         $this->actingAsUsuario($medico)
@@ -118,7 +134,7 @@ class ExpedientesTest extends TestCase
     public function test_consultar_expediente_registra_bitacora(): void
     {
         $medico = User::factory()->create();
-        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase());
+        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase($medico));
 
         $this->actingAsUsuario($medico)->getJson('/api/v1/expedientes/'.$this->clave(1))->assertStatus(200);
 
@@ -136,9 +152,9 @@ class ExpedientesTest extends TestCase
     public function test_editar_expediente_registra_el_detalle_correcto(): void
     {
         $medico = User::factory()->create();
-        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase());
+        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase($medico));
 
-        $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/'.$this->clave(1), $this->payloadBase());
+        $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/'.$this->clave(1), $this->payloadBase($medico));
         $this->assertDatabaseHas('auditoria', [
             'anio' => now('America/Mexico_City')->year,
             'folio_anual' => 1,
@@ -146,7 +162,7 @@ class ExpedientesTest extends TestCase
             'detalle' => 'Guardado sin cambios',
         ]);
 
-        $payloadConCambio = array_merge($this->payloadBase(), ['peso' => '90']);
+        $payloadConCambio = array_merge($this->payloadBase($medico), ['peso' => '90']);
         $this->actingAsUsuario($medico)->putJson('/api/v1/expedientes/'.$this->clave(1), $payloadConCambio);
 
         // No se ordena por "fecha": dentro de una misma transaccion de prueba,
