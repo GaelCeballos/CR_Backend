@@ -5,6 +5,7 @@ namespace App\Exceptions;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
@@ -81,6 +82,19 @@ class ApiExceptionHandler
             }
         });
 
+        // Un registro duplicado casi siempre es una carrera entre dos equipos
+        // guardando al mismo tiempo (p. ej. el folio, si se agotaron los
+        // reintentos): se avisa con un 409 que se puede volver a intentar.
+        $exceptions->render(function (UniqueConstraintViolationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                report($e);
+
+                return new JsonResponse([
+                    'error' => ['code' => 'CONFLICT', 'message' => 'Otro equipo guardó al mismo tiempo. Vuelve a intentar guardar.'],
+                ], 409);
+            }
+        });
+
         // Cualquier otra excepcion no prevista: se registra en el log y se
         // responde un 500 generico, sin filtrar detalles internos al cliente.
         $exceptions->render(function (Throwable $e, Request $request) {
@@ -91,7 +105,7 @@ class ApiExceptionHandler
             if ($e instanceof ApiException || $e instanceof ValidationException
                 || $e instanceof AuthenticationException || $e instanceof AuthorizationException
                 || $e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException
-                || $e instanceof ThrottleRequestsException) {
+                || $e instanceof ThrottleRequestsException || $e instanceof UniqueConstraintViolationException) {
                 return null;
             }
 

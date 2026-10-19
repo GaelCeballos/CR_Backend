@@ -11,6 +11,7 @@ use App\Http\Resources\ExpedienteResource;
 use App\Models\HistoriaClinica;
 use App\Services\AuditoriaService;
 use App\Services\ExpedienteBuilder;
+use App\Services\FolioAnualService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -26,6 +27,7 @@ class ExpedienteController extends Controller
     public function __construct(
         private ExpedienteBuilder $builder,
         private AuditoriaService $bitacora,
+        private FolioAnualService $folios,
     ) {}
 
     /**
@@ -46,7 +48,9 @@ class ExpedienteController extends Controller
 
     /**
      * Post: crea un expediente nuevo completo y registra "Creación de Folio"
-     * en la bitacora.
+     * en la bitacora, ambos en la misma transaccion: o se guardan los dos o
+     * ninguno. Si otro equipo guarda al mismo tiempo y el folio choca, el alta
+     * se repite con el siguiente folio (ver FolioAnualService::conReintento).
      *
      * @param  StoreExpedienteRequest  $request  payload plano del expediente, ya validado
      * @return JsonResponse el expediente recien creado (201)
@@ -54,10 +58,14 @@ class ExpedienteController extends Controller
     public function store(StoreExpedienteRequest $request)
     {
         $usuario = $request->user();
-        $historia = $this->builder->crear($request->validated(), $usuario);
+        $historia = $this->folios->conReintento(function () use ($request, $usuario) {
+            $historia = $this->builder->crear($request->validated(), $usuario);
 
-        $motivo = $historia->tipo_examen_motivo ?? 'sin motivo capturado';
-        $this->bitacora->registrar($usuario, AccionAuditoria::CreacionDeFolio, $historia, "Nueva historia clinica · {$motivo}");
+            $motivo = $historia->tipo_examen_motivo ?? 'sin motivo capturado';
+            $this->bitacora->registrar($usuario, AccionAuditoria::CreacionDeFolio, $historia, "Nueva historia clinica · {$motivo}");
+
+            return $historia;
+        });
 
         return response()->json(new ExpedienteResource($historia), 201);
     }
