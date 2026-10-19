@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Domicilio;
 use App\Models\Paciente;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -17,6 +18,9 @@ class PacienteUpsertService
     /**
      * Busca un paciente existente por CURP o NSS normalizados; si no existe,
      * crea uno nuevo. Si existe, actualiza sus datos fijos con los que llegaron.
+     * Debe llamarse dentro de una transaccion: el advisory lock por CURP/NSS
+     * evita que dos altas simultaneas del mismo paciente nuevo lo creen las
+     * dos (la segunda chocaria con pacientes_curp_uq / pacientes_nss_uq).
      *
      * @param  array<string, mixed>  $datos  curp, nss, nombre_completo, fecha_nacimiento, genero, originario
      * @return Paciente el paciente encontrado o recien creado
@@ -32,6 +36,13 @@ class PacienteUpsertService
 
         if ($nss !== null && strlen($nss) !== 11) {
             throw ValidationException::withMessages(['nss' => 'El NSS debe tener 11 dígitos.']);
+        }
+
+        // Siempre en el mismo orden (CURP y luego NSS) para que dos altas no se
+        // queden esperando una a la otra. La segunda alta espera aqui hasta que
+        // la primera confirme, y entonces ya encuentra al paciente que esta creo.
+        foreach (array_filter(['curp' => $curp, 'nss' => $nss]) as $tipo => $clave) {
+            DB::select('select pg_advisory_xact_lock(hashtext(?))', ["paciente:{$tipo}:{$clave}"]);
         }
 
         $paciente = $this->buscarExistente($curp, $nss);

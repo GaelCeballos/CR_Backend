@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,5 +30,47 @@ class FolioAnualService
             ->max('folio_anual');
 
         return ($maximo ?? 0) + 1;
+    }
+
+    /**
+     * Ejecuta un alta completa (historia clinica + bitacora) en su propia
+     * transaccion. Si aun asi choca con otra alta simultanea (folio o paciente
+     * duplicado, p. ej. dos equipos guardando al mismo tiempo), descarta el
+     * intento y lo repite en vez de devolverle un error al usuario.
+     *
+     * @param  callable  $alta  hace el alta; debe pedir el folio con siguiente()
+     * @param  int  $intentos  maximo de intentos antes de rendirse
+     * @return mixed lo que devuelva $alta
+     *
+     * @throws UniqueConstraintViolationException si el folio sigue chocando tras todos los intentos
+     */
+    public function conReintento(callable $alta, int $intentos = 3): mixed
+    {
+        for ($intento = 1; ; $intento++) {
+            try {
+                // El 3 hace que Laravel tambien reintente si Postgres aborta por deadlock.
+                return DB::transaction($alta, 3);
+            } catch (UniqueConstraintViolationException $e) {
+                if ($intento >= $intentos || ! self::esChoqueDeAlta($e)) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    /**
+     * @return bool true si el duplicado es del folio o del paciente (CURP/NSS),
+     *              los unicos que una alta simultanea puede provocar y que se
+     *              resuelven repitiendo el alta
+     */
+    private static function esChoqueDeAlta(UniqueConstraintViolationException $e): bool
+    {
+        foreach (['historias_clinicas_anio_folio_anual_unique', 'pacientes_curp_uq', 'pacientes_nss_uq'] as $restriccion) {
+            if (str_contains($e->getMessage(), $restriccion)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

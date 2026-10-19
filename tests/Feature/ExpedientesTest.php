@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Auditoria;
+use App\Models\HistoriaClinica;
+use App\Models\Paciente;
 use App\Models\User;
+use App\Services\FolioAnualService;
+use App\Services\PacienteUpsertService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -93,6 +97,61 @@ class ExpedientesTest extends TestCase
             'folio_anual' => 1,
             'accion' => 'Creación de Folio',
         ]);
+    }
+
+    /**
+     * Si dos equipos guardan al mismo tiempo y el folio choca, el alta se
+     * repite con el siguiente folio libre en vez de responder un error.
+     */
+    public function test_folio_duplicado_por_alta_simultanea_se_reintenta(): void
+    {
+        $medico = User::factory()->create();
+        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase($medico))->assertStatus(201);
+        $existente = HistoriaClinica::firstOrFail();
+
+        $folios = app(FolioAnualService::class);
+        $intentos = 0;
+
+        $historia = $folios->conReintento(function () use ($folios, $existente, $medico, &$intentos) {
+            $intentos++;
+
+            return HistoriaClinica::create([
+                'paciente_id' => $existente->paciente_id,
+                // Primer intento: simula que otro equipo ya se quedo con este folio.
+                'folio_anual' => $intentos === 1 ? $existente->folio_anual : $folios->siguiente($existente->anio),
+                'creado_por' => $medico->id,
+                'actualizado_por' => $medico->id,
+            ]);
+        });
+
+        $this->assertSame(2, $intentos);
+        $this->assertSame(2, (int) $historia->folio_anual);
+    }
+
+    /**
+     * Si dos equipos dan de alta al mismo paciente nuevo al mismo tiempo y el
+     * CURP choca, el alta se repite y reutiliza al paciente ya creado.
+     */
+    public function test_paciente_duplicado_por_alta_simultanea_se_reintenta(): void
+    {
+        $medico = User::factory()->create();
+        $this->actingAsUsuario($medico)->postJson('/api/v1/expedientes', $this->payloadBase($medico))->assertStatus(201);
+        $existente = Paciente::firstOrFail();
+
+        $intentos = 0;
+
+        $paciente = app(FolioAnualService::class)->conReintento(function () use ($existente, &$intentos) {
+            $intentos++;
+
+            // Primer intento: simula que el otro equipo creo al paciente justo antes.
+            return $intentos === 1
+                ? Paciente::create(['nombre_completo' => 'OTRO EQUIPO', 'curp' => $existente->curp])
+                : app(PacienteUpsertService::class)->upsert(['nombre_completo' => 'OTRO EQUIPO', 'curp' => $existente->curp]);
+        });
+
+        $this->assertSame(2, $intentos);
+        $this->assertSame($existente->id, $paciente->id);
+        $this->assertSame(1, Paciente::count());
     }
 
     /**
