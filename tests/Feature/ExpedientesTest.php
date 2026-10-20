@@ -155,6 +155,102 @@ class ExpedientesTest extends TestCase
     }
 
     /**
+     * Los signos vitales aceptan coma decimal ("36,2"); antes llegaban tal
+     * cual a una columna numeric y el alta tronaba con un 500.
+     */
+    public function test_signos_vitales_aceptan_coma_decimal(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['temperatura' => '36,2', 'pulso' => '77'])
+            ->assertStatus(201);
+
+        $exploracion = HistoriaClinica::firstOrFail()->exploracion;
+        $this->assertEquals(36.2, (float) $exploracion->temperatura);
+        $this->assertEquals(77, (float) $exploracion->pulso);
+    }
+
+    /**
+     * Un signo vital que no es numero se rechaza con un aviso del campo, no con un 500.
+     */
+    public function test_signo_vital_no_numerico_es_invalido(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['temperatura' => 'treinta'])
+            ->assertStatus(400)
+            ->assertJsonPath('error.code', 'VALIDATION_ERROR')
+            ->assertJsonStructure(['error' => ['fields' => ['temperatura']]]);
+
+        $this->assertSame(0, HistoriaClinica::count());
+    }
+
+    /**
+     * La audiometria acepta coma decimal y "dB" ("25,5 dB"), y la zona de
+     * trabajo sin acento ("tecoman") se guarda como en el catalogo.
+     */
+    public function test_audiometria_y_zona_se_normalizan(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['aud500_od' => '25,5 dB', 'zona_trabajo' => 'tecoman'])
+            ->assertStatus(201)
+            ->assertJsonPath('values.zona_trabajo', 'TECOMÁN');
+
+        $this->assertEquals(25.5, (float) HistoriaClinica::firstOrFail()->audiometria()->where('frecuencia_hz', 500)->value('umbral_db'));
+    }
+
+    /**
+     * Talla "0" da un aviso de rango, no un 500 por la restriccion talla_rango.
+     */
+    public function test_talla_cero_es_invalida(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', array_merge($this->payloadBase($medico), ['talla' => '0']))
+            ->assertStatus(400)
+            ->assertJsonStructure(['error' => ['fields' => ['talla']]]);
+    }
+
+    /**
+     * Los mensajes genericos salen en español y con el nombre visible del campo.
+     */
+    public function test_mensajes_de_validacion_en_espanol(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', array_merge($this->payloadBase($medico), ['ad_coc' => 'POSITIVO', 'aud150_od' => 'mucho']))
+            ->assertStatus(400)
+            ->assertJsonPath('error.fields.ad_coc', 'El valor seleccionado en el campo Cocaína (COC) no es válido.')
+            ->assertJsonPath('error.fields.aud150_od', 'El campo Audiometría 150 Hz OD debe ser un número.');
+    }
+
+    /**
+     * La zona de trabajo es texto libre: una zona nueva ("pihuamo") se guarda
+     * en mayusculas y desde entonces aparece en las sugerencias del campo.
+     */
+    public function test_zona_nueva_se_guarda_y_se_sugiere(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['zona_trabajo' => ' pihuamo '])
+            ->assertStatus(201)
+            ->assertJsonPath('values.zona_trabajo', 'PIHUAMO');
+
+        $zonas = $this->actingAsUsuario($medico)->getJson('/api/v1/expedientes/zonas')->assertOk()->json('items');
+
+        $this->assertContains('PIHUAMO', $zonas);
+        $this->assertContains('TECOMÁN', $zonas);
+        $this->assertNotContains('TECOMAN', $zonas);
+    }
+
+    /**
      * Un paciente recurrente (mismo CURP) reutiliza el mismo registro de
      * pacientes al crear un segundo expediente.
      */

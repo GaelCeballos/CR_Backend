@@ -293,18 +293,21 @@ class ExpedienteBuilder
 
     /**
      * Da las columnas de hc_exploracion listas para guardar, normalizando la
-     * talla (metros vs. centimetros) y validando el rango del peso.
+     * talla (metros vs. centimetros), validando el rango del peso y aceptando
+     * coma decimal en los signos vitales.
      *
      * @param  array<string, mixed>  $payload  payload completo del expediente
      * @return array<string, mixed> columnas de hc_exploracion ya normalizadas
      *
-     * @throws ValidationException si el peso sale del rango permitido
+     * @throws ValidationException si el peso sale del rango o un signo vital no es numerico
      */
     private function datosExploracion(array $payload): array
     {
         $datos = Arr::only($payload, CamposExpediente::exploracion());
 
-        if (! empty($datos['talla'])) {
+        // isset y no empty(): "0" tambien debe pasar por normalizarTalla para
+        // recibir su aviso de rango en vez de chocar con talla_rango en Postgres.
+        if (isset($datos['talla']) && $datos['talla'] !== '') {
             $datos['talla'] = $this->calculos->normalizarTalla((string) $datos['talla']);
         }
 
@@ -316,6 +319,25 @@ class ExpedienteBuilder
             }
 
             $datos['peso'] = $peso;
+        }
+
+        // Signos vitales: son columnas numeric, asi que la coma decimal ("36,2")
+        // se pasa a punto y un texto no numerico se rechaza con un aviso del
+        // campo en vez de llegar a Postgres y tronar con un 500.
+        foreach (['pulso', 'respiracion', 'temperatura', 'ta_sistolica', 'ta_diastolica'] as $columna) {
+            if (! isset($datos[$columna]) || $datos[$columna] === '') {
+                continue;
+            }
+
+            $texto = trim(str_replace(',', '.', (string) $datos[$columna]));
+
+            if (! is_numeric($texto)) {
+                throw ValidationException::withMessages([
+                    $columna => EtiquetasCampoExpediente::etiqueta($columna).': escribe solo el número (por ejemplo 36.2).',
+                ]);
+            }
+
+            $datos[$columna] = $texto;
         }
 
         return $datos;

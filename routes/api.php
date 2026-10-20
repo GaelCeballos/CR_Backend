@@ -62,6 +62,7 @@ Route::prefix('v1')->group(function () {
             Route::get('expedientes/siguiente-folio', [ExpedienteController::class, 'siguienteFolio']);
             Route::get('expedientes/estadisticas', [ExpedienteController::class, 'estadisticas']);
             Route::get('expedientes/empresas', [ExpedienteController::class, 'empresas']);
+            Route::get('expedientes/zonas', [ExpedienteController::class, 'zonas']);
             Route::get('expedientes', [ExpedienteController::class, 'index']);
             Route::post('expedientes', [ExpedienteController::class, 'store']);
             Route::get('expedientes/{clave}', [ExpedienteController::class, 'show']);
