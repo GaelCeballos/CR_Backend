@@ -305,7 +305,9 @@ class ExpedienteBuilder
     {
         $datos = Arr::only($payload, CamposExpediente::exploracion());
 
-        if (! empty($datos['talla'])) {
+        // isset y no empty(): "0" tambien debe pasar por normalizarTalla para
+        // recibir su aviso de rango en vez de chocar con talla_rango en Postgres.
+        if (isset($datos['talla']) && $datos['talla'] !== '') {
             $datos['talla'] = $this->calculos->normalizarTalla((string) $datos['talla']);
         }
 

@@ -188,6 +188,69 @@ class ExpedientesTest extends TestCase
     }
 
     /**
+     * La audiometria acepta coma decimal y "dB" ("25,5 dB"), y la zona de
+     * trabajo sin acento ("tecoman") se guarda como en el catalogo.
+     */
+    public function test_audiometria_y_zona_se_normalizan(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['aud500_od' => '25,5 dB', 'zona_trabajo' => 'tecoman'])
+            ->assertStatus(201)
+            ->assertJsonPath('values.zona_trabajo', 'TECOMÁN');
+
+        $this->assertEquals(25.5, (float) HistoriaClinica::firstOrFail()->audiometria()->where('frecuencia_hz', 500)->value('umbral_db'));
+    }
+
+    /**
+     * Talla "0" da un aviso de rango, no un 500 por la restriccion talla_rango.
+     */
+    public function test_talla_cero_es_invalida(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', array_merge($this->payloadBase($medico), ['talla' => '0']))
+            ->assertStatus(400)
+            ->assertJsonStructure(['error' => ['fields' => ['talla']]]);
+    }
+
+    /**
+     * Los mensajes genericos salen en español y con el nombre visible del campo.
+     */
+    public function test_mensajes_de_validacion_en_espanol(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', array_merge($this->payloadBase($medico), ['ad_coc' => 'POSITIVO', 'aud150_od' => 'mucho']))
+            ->assertStatus(400)
+            ->assertJsonPath('error.fields.ad_coc', 'El valor seleccionado en el campo Cocaína (COC) no es válido.')
+            ->assertJsonPath('error.fields.aud150_od', 'El campo Audiometría 150 Hz OD debe ser un número.');
+    }
+
+    /**
+     * La zona de trabajo es texto libre: una zona nueva ("pihuamo") se guarda
+     * en mayusculas y desde entonces aparece en las sugerencias del campo.
+     */
+    public function test_zona_nueva_se_guarda_y_se_sugiere(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['zona_trabajo' => ' pihuamo '])
+            ->assertStatus(201)
+            ->assertJsonPath('values.zona_trabajo', 'PIHUAMO');
+
+        $zonas = $this->actingAsUsuario($medico)->getJson('/api/v1/expedientes/zonas')->assertOk()->json('items');
+
+        $this->assertContains('PIHUAMO', $zonas);
+        $this->assertContains('TECOMÁN', $zonas);
+        $this->assertNotContains('TECOMAN', $zonas);
+    }
+
+    /**
      * Un paciente recurrente (mismo CURP) reutiliza el mismo registro de
      * pacientes al crear un segundo expediente.
      */

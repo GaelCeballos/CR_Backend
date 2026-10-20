@@ -177,6 +177,24 @@ class ExpedienteController extends Controller
     }
 
     /**
+     * Get: sugerencias para "Zona de trabajo": las de fabrica mas cualquier
+     * zona nueva ya capturada en algun expediente (p. ej. "PIHUAMO"), para que
+     * una zona escrita una vez aparezca como opcion en los siguientes.
+     *
+     * @return JsonResponse lista ordenada de zonas, sin repetidos
+     */
+    public function zonas()
+    {
+        $capturadas = HistoriaClinica::whereNotNull('zona_trabajo')->where('zona_trabajo', '!=', '')
+            ->distinct()->pluck('zona_trabajo')->all();
+
+        $zonas = array_values(array_unique([...StoreExpedienteRequest::ZONAS_TRABAJO, ...$capturadas]));
+        sort($zonas);
+
+        return response()->json(['items' => $zonas]);
+    }
+
+    /**
      * Get: tarjetas de metricas del navegador de expedientes, acotadas al año
      * dado (por defecto el año actual): los años anteriores quedan pendientes
      * de respaldo/cierre y no deben mezclarse en estas cifras.
