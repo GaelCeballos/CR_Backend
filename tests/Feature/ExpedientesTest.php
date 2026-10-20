@@ -155,6 +155,39 @@ class ExpedientesTest extends TestCase
     }
 
     /**
+     * Los signos vitales aceptan coma decimal ("36,2"); antes llegaban tal
+     * cual a una columna numeric y el alta tronaba con un 500.
+     */
+    public function test_signos_vitales_aceptan_coma_decimal(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['temperatura' => '36,2', 'pulso' => '77'])
+            ->assertStatus(201);
+
+        $exploracion = HistoriaClinica::firstOrFail()->exploracion;
+        $this->assertEquals(36.2, (float) $exploracion->temperatura);
+        $this->assertEquals(77, (float) $exploracion->pulso);
+    }
+
+    /**
+     * Un signo vital que no es numero se rechaza con un aviso del campo, no con un 500.
+     */
+    public function test_signo_vital_no_numerico_es_invalido(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', $this->payloadBase($medico) + ['temperatura' => 'treinta'])
+            ->assertStatus(400)
+            ->assertJsonPath('error.code', 'VALIDATION_ERROR')
+            ->assertJsonStructure(['error' => ['fields' => ['temperatura']]]);
+
+        $this->assertSame(0, HistoriaClinica::count());
+    }
+
+    /**
      * Un paciente recurrente (mismo CURP) reutiliza el mismo registro de
      * pacientes al crear un segundo expediente.
      */
