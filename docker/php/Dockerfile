@@ -1,4 +1,4 @@
-FROM php:8.4-apache
+FROM php:8.4.27-apache
 
 # Instalamos dependencias del sistema (usando apt-get porque la imagen de Apache usa Debian)
 RUN apt-get update && apt-get install -y \
