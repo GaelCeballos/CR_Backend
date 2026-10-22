@@ -371,6 +371,32 @@ class ExpedientesTest extends TestCase
     }
 
     /**
+     * Servicios Medicos ve en el navegador los expedientes de todos los
+     * medicos, no solo los propios, y puede filtrar por uno con medico_id.
+     */
+    public function test_servicios_medicos_ve_los_expedientes_de_todos(): void
+    {
+        $medicoA = User::factory()->create();
+        $medicoB = User::factory()->create();
+        $this->actingAsUsuario($medicoA)->postJson('/api/v1/expedientes', $this->payloadBase($medicoA))->assertStatus(201);
+        $this->actingAsUsuario($medicoB)->postJson('/api/v1/expedientes', array_merge(
+            $this->payloadBase($medicoB),
+            ['curp' => null, 'nss' => '12345678901'],
+        ))->assertStatus(201);
+
+        $this->actingAsUsuario($medicoA)->getJson('/api/v1/expedientes')
+            ->assertOk()
+            ->assertJsonPath('total', 2);
+
+        $this->actingAsUsuario($medicoA)->getJson('/api/v1/expedientes?medico_id='.$medicoB->id)
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('items.0.folio', 2);
+
+        $this->actingAsUsuario($medicoA)->getJson('/api/v1/expedientes/'.$this->clave(2))->assertOk();
+    }
+
+    /**
      * Autentica las peticiones de prueba con un token Sanctum real.
      */
     private function actingAsUsuario(User $usuario): self
