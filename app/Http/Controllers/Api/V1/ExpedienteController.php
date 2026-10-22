@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AccionAuditoria;
-use App\Enums\RolUsuario;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreExpedienteRequest;
 use App\Http\Requests\UpdateExpedienteRequest;
@@ -73,7 +72,7 @@ class ExpedienteController extends Controller
     /**
      * Get: lista expedientes para el navegador, con busqueda y filtros.
      *
-     * @param  Request  $request  q, desde, hasta, tipo, page, page_size
+     * @param  Request  $request  q, desde, hasta, tipo, empresa, medico_id, solo_examenes_visuales, page, page_size
      * @return JsonResponse pagina de expedientes resumidos
      */
     public function index(Request $request)
@@ -114,14 +113,9 @@ class ExpedienteController extends Controller
             $query->where('empresa', 'ilike', "%{$empresa}%");
         }
 
-        // Servicios Médicos SIEMPRE queda forzado a sus propias atenciones, sin
-        // importar qué medico_id mande el cliente: la restricción real vive aquí,
-        // no en el frontend. Solo un admin puede ver "todos" o elegir a cualquiera.
-        $medicoId = $request->user()->rol === RolUsuario::Admin
-            ? $request->query('medico_id')
-            : $request->user()->id;
-
-        if ($medicoId) {
+        // Cualquier rol ve los expedientes de todos los medicos; medico_id es
+        // solo un filtro opcional del navegador.
+        if ($medicoId = $request->query('medico_id')) {
             $query->where('medico_id', $medicoId);
         }
 
