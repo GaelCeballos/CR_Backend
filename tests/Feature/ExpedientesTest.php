@@ -27,8 +27,8 @@ class ExpedientesTest extends TestCase
 
     /**
      * Datos minimos de un expediente nuevo, listos para extender en cada prueba.
-     * Incluye los campos de "Datos Generales" (obligatorios) y al propio
-     * medico como "medico_dictaminador" (tambien obligatorio).
+     * Incluye los campos de "Datos Generales" y al propio medico como
+     * "medico_dictaminador" (obligatorio junto con el nombre y la CURP/NSS).
      *
      * @return array<string, mixed>
      */
@@ -281,6 +281,47 @@ class ExpedientesTest extends TestCase
             ->postJson('/api/v1/expedientes', $payload)
             ->assertStatus(400)
             ->assertJsonPath('error.code', 'VALIDATION_ERROR');
+    }
+
+    /**
+     * Solo el nombre, la CURP o el NSS y el medico dictaminador son
+     * obligatorios: con eso basta para crear el expediente.
+     */
+    public function test_expediente_solo_con_campos_obligatorios_se_crea(): void
+    {
+        $medico = User::factory()->create();
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', [
+                'nombre_completo' => 'Garcia Lopez Juan Carlos',
+                'nss' => '12345678901',
+                'medico_dictaminador' => $medico->id,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('folio', 1)
+            ->assertJsonPath('values.empresa', null)
+            ->assertJsonPath('values.edad', null);
+    }
+
+    /**
+     * Sin medico dictaminador, o sin CURP ni NSS, el expediente se rechaza.
+     */
+    public function test_expediente_sin_medico_o_sin_identificador_es_invalido(): void
+    {
+        $medico = User::factory()->create();
+        $minimo = ['nombre_completo' => 'Garcia Lopez Juan Carlos', 'nss' => '12345678901', 'medico_dictaminador' => $medico->id];
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', array_diff_key($minimo, ['medico_dictaminador' => true]))
+            ->assertStatus(400)
+            ->assertJsonPath('error.fields.medico_dictaminador', 'Selecciona el médico dictaminador / médico que atiende.');
+
+        $this->actingAsUsuario($medico)
+            ->postJson('/api/v1/expedientes', array_diff_key($minimo, ['nss' => true]))
+            ->assertStatus(400)
+            ->assertJsonPath('error.fields.curp', 'Escribe la CURP o el NSS del paciente.');
+
+        $this->assertSame(0, HistoriaClinica::count());
     }
 
     /**
