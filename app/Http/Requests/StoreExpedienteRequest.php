@@ -9,12 +9,12 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Valida el payload plano de un expediente (alta o edicion). La mayoria de
- * los campos clinicos son opcionales (solo se valida el formato de los que
- * si vienen); son obligatorios los campos de "Datos Generales" (identidad,
- * datos laborales, datos personales y domicilio) mas el medico dictaminador.
- * Tipo de sangre y los 6 resultados de antidoping dejaron de ser
- * obligatorios aqui: el frontend solo avisa si quedan vacios, no bloquea el
+ * Valida el payload plano de un expediente (alta o edicion). Por solicitud
+ * del cliente, los unicos campos obligatorios son el nombre completo, la
+ * CURP o el NSS (al menos uno de los dos) y el medico dictaminador; de todos
+ * los demas solo se valida el formato de los que si vienen (catalogos,
+ * fechas, numeros). Tipo de sangre y los 6 resultados de antidoping tampoco
+ * son obligatorios: el frontend solo avisa si quedan vacios, no bloquea el
  * guardado (ver CAMPOS_ADVERTENCIA en crm-colima).
  */
 class StoreExpedienteRequest extends FormRequest
@@ -112,33 +112,31 @@ class StoreExpedienteRequest extends FormRequest
             // CURP y NSS son opcionales por separado, pero no pueden faltar los dos a la vez.
             'curp' => ['nullable', 'required_without:nss', 'string'],
             'nss' => ['nullable', 'required_without:curp', 'string'],
-            'fecha_nacimiento' => ['required', 'date'],
-            'genero' => ['required', Rule::in(['MASCULINO', 'FEMENINO'])],
-            'originario' => ['required', 'string'],
+            'fecha_nacimiento' => ['nullable', 'date'],
+            'genero' => ['nullable', Rule::in(['MASCULINO', 'FEMENINO'])],
+            'originario' => ['nullable', 'string'],
 
-            'domicilio_calle' => ['required', 'string'],
-            'domicilio_colonia' => ['required', 'string'],
-            'domicilio_municipio' => ['required', 'string'],
-            'domicilio_estado' => ['required', 'string'],
+            'domicilio_calle' => ['nullable', 'string'],
+            'domicilio_colonia' => ['nullable', 'string'],
+            'domicilio_municipio' => ['nullable', 'string'],
+            'domicilio_estado' => ['nullable', 'string'],
 
-            'puesto' => ['required', 'string'],
-            'empresa' => ['required', 'string'],
-            // Zona de trabajo, Área, Categoría del examen y Exposición (POE)
-            // quedan opcionales (dejaron de ser obligatorias).
+            'puesto' => ['nullable', 'string'],
+            'empresa' => ['nullable', 'string'],
             'zona_trabajo' => ['nullable', 'string', 'max:255'],
-            'tipo_examen_motivo' => ['required', Rule::in([
+            'tipo_examen_motivo' => ['nullable', Rule::in([
                 'INGRESO / EVALUACIÓN INICIAL', 'RENOVACIÓN ANUAL', 'CONTROL PERIÓDICO / SEGUIMIENTO',
             ])],
-            'antiguedad_empresa' => ['required', 'string'],
-            'antiguedad_puesto' => ['required', 'string'],
+            'antiguedad_empresa' => ['nullable', 'string'],
+            'antiguedad_puesto' => ['nullable', 'string'],
             'exposicion_poe' => ['nullable', 'string'],
             'area' => ['nullable', 'string'],
             'tipo_examen_categoria' => ['nullable', Rule::in([
                 'PERSONAL GENERAL', 'OPERADORES', 'CAT B', 'CAT C', 'VISITA TEC',
             ])],
-            'telefono' => ['required', 'string'],
-            'religion' => ['required', Rule::in(['Católica', 'Cristiana', 'Ninguna', 'Atea', 'Negado', 'Otra'])],
-            'estado_civil' => ['required', Rule::in([
+            'telefono' => ['nullable', 'string'],
+            'religion' => ['nullable', Rule::in(['Católica', 'Cristiana', 'Ninguna', 'Atea', 'Negado', 'Otra'])],
+            'estado_civil' => ['nullable', Rule::in([
                 'SOLTERO', 'CASADO', 'UNION LIBRE', 'DIVORCIADO', 'SEPARADO', 'VIUDO',
             ])],
             'escolaridad' => ['nullable', Rule::in([
@@ -185,21 +183,6 @@ class StoreExpedienteRequest extends FormRequest
             'nombre_completo.required' => 'Escribe el nombre completo del paciente.',
             'curp.required_without' => 'Escribe la CURP o el NSS del paciente.',
             'nss.required_without' => 'Escribe el NSS o la CURP del paciente.',
-            'empresa.required' => 'La empresa es obligatoria.',
-            'puesto.required' => 'El puesto es obligatorio.',
-            'tipo_examen_motivo.required' => 'Selecciona el motivo del examen.',
-            'antiguedad_empresa.required' => 'La antigüedad en la empresa es obligatoria.',
-            'antiguedad_puesto.required' => 'La antigüedad en el puesto es obligatoria.',
-            'genero.required' => 'Selecciona el género.',
-            'fecha_nacimiento.required' => 'La fecha de nacimiento es obligatoria.',
-            'domicilio_calle.required' => 'La calle y número son obligatorios.',
-            'domicilio_colonia.required' => 'La colonia es obligatoria.',
-            'domicilio_municipio.required' => 'El municipio es obligatorio.',
-            'domicilio_estado.required' => 'El estado es obligatorio.',
-            'telefono.required' => 'El teléfono es obligatorio.',
-            'originario.required' => 'El estado de origen es obligatorio.',
-            'religion.required' => 'Selecciona la religión.',
-            'estado_civil.required' => 'Selecciona el estado civil.',
         ];
     }
 
