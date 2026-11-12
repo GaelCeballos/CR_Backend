@@ -25,9 +25,11 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
-    Route::middleware(['auth:sanctum', 'active'])->group(function () {
+    Route::middleware(['auth:sanctum', 'active', 'extender-sesion'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        // Revision periodica del front: no cuenta como actividad.
+        Route::get('auth/sesion', [AuthController::class, 'sesion'])->withoutMiddleware('extender-sesion');
 
         Route::put('me', [MeController::class, 'update']);
         Route::post('me/password', [MeController::class, 'changePassword']);
