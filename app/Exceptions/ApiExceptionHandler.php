@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Services\SesionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -52,8 +53,16 @@ class ApiExceptionHandler
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
+                // El front usa el codigo para explicar en el login por que se cerro la sesion.
+                $codigo = app(SesionService::class)->motivoRechazo($request->bearerToken());
+                $mensajes = [
+                    'SESSION_REPLACED' => 'Tu sesión se cerró porque tu cuenta inició sesión en otro equipo o pestaña.',
+                    'SESSION_EXPIRED' => 'Tu sesión venció por inactividad. Vuelve a iniciar sesión.',
+                    'UNAUTHENTICATED' => 'No has iniciado sesión.',
+                ];
+
                 return new JsonResponse([
-                    'error' => ['code' => 'UNAUTHENTICATED', 'message' => 'No has iniciado sesión.'],
+                    'error' => ['code' => $codigo, 'message' => $mensajes[$codigo]],
                 ], 401);
             }
         });

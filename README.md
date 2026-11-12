@@ -21,7 +21,7 @@ repositorio hermano `crm-colima`; su contrato detallado con esta API está en `c
 Librerías de Composer relevantes (ver `composer.json` para la lista completa y resolución exacta
 en `composer.lock`):
 
-- `laravel/sanctum` — tokens Bearer de API (sesión única, expiración de 8 horas).
+- `laravel/sanctum` — tokens Bearer de API (sesión única, vence tras 1 hora sin actividad, tope de 8 horas).
 - `laravel/tinker` — consola interactiva para depuración.
 - `laravel/pint` / `phpunit/phpunit` / `mockery/mockery` / `fakerphp/faker` — calidad y pruebas (dev).
 
@@ -50,9 +50,15 @@ dependencia extra es superficie de ataque/configuración adicional en un sistema
   (`hc_exploracion`): Postgres las recalcula solas a partir de peso/talla/TA; la aplicación nunca
   las escribe.
 - **Autenticación por token Bearer (Sanctum), no cookies de sesión**, porque frontend y backend
-  corren en orígenes distintos. **Sesión única por usuario**: cada login revoca cualquier token
-  anterior de esa cuenta (si alguien no cerró sesión en otro equipo, el siguiente login la
-  invalida); logout destruye solo el token con el que se hizo la petición.
+  corren en orígenes distintos. **Sesión única por usuario**: cada login deja sin efecto cualquier
+  token anterior de esa cuenta (lo marca como `reemplazada`, para que ese equipo reciba
+  `SESSION_REPLACED`); logout destruye solo el token con el que se hizo la petición. La sesión
+  **vence tras 1 hora sin actividad** (cada petición la extiende; `GET /auth/sesion` no cuenta) y
+  nunca dura más de 8 horas desde el login (`App\Services\SesionService`, middleware
+  `extender-sesion`). Los tokens vencidos hace más de un día se borran en cada login (Render
+  gratuito no ejecuta tareas programadas).
+- **Llave del borrador** (`users.llave_borrador`, cifrada con `APP_KEY`): el login y `/auth/me` la
+  entregan para que el front cifre en el navegador el expediente nuevo que no alcanzó a enviarse.
 - **Hash de contraseñas con Argon2id** (no bcrypt por defecto, no SHA-256 del lado del cliente).
 - **Separación de permisos por middleware**, no solo por UI: `servicios_medicos` únicamente puede
   capturar/editar pacientes y expedientes, y su propio perfil/contraseña. Todo lo demás
@@ -122,7 +128,8 @@ La API queda disponible en `http://localhost:8080/api/v1` (puerto configurable c
 | `DB_HOST` | `db` dentro de Docker; `127.0.0.1` si corres Laravel fuera del contenedor |
 | `APP_TIMEZONE` | `America/Mexico_City` — zona de negocio para fechas y la jornada del Excel |
 | `HASH_DRIVER` | `argon2id` |
-| `SANCTUM_TOKEN_EXPIRATION_MINUTES` | Vida del token Bearer (480 = 8 horas, una jornada) |
+| `SANCTUM_TOKEN_EXPIRATION_MINUTES` | Tope absoluto de una sesión desde el login (480 = 8 horas, una jornada) |
+| `SESION_INACTIVIDAD_MINUTOS` | Minutos sin actividad tras los que vence la sesión (60) |
 | `CORS_ALLOWED_ORIGINS` | Dominio(s) del frontend, separados por coma |
 
 ## Pruebas automatizadas
@@ -155,9 +162,10 @@ Base `/api/v1`. Autenticación: `Authorization: Bearer <token>` (se obtiene en `
 
 | Método y ruta | Rol | Qué hace |
 |---|---|---|
-| `POST /auth/login` | público | Inicia sesión; revoca el token anterior de esa cuenta |
+| `POST /auth/login` | público | Inicia sesión; deja sin efecto el token anterior de esa cuenta; entrega la llave del borrador |
 | `POST /auth/logout` | cualquiera | Revoca el token actual |
-| `GET /auth/me` | cualquiera | Usuario autenticado |
+| `GET /auth/me` | cualquiera | Usuario autenticado y llave del borrador |
+| `GET /auth/sesion` | cualquiera | Revisión periódica: `{ vence_en }`; no extiende la sesión |
 | `PUT /me` | cualquiera | Edita el perfil propio |
 | `POST /me/password` | cualquiera | Cambia la contraseña propia |
 | `GET /users?vista=selector` | cualquiera | Médicos activos para el selector de expedientes |

@@ -50,7 +50,11 @@ return [
     |
     */
 
+    // Tope absoluto de una sesion desde el login, aunque haya actividad (8 h = un turno).
     'expiration' => env('SANCTUM_TOKEN_EXPIRATION_MINUTES', 480),
+
+    // Minutos sin actividad tras los que vence la sesion (ver App\Services\SesionService).
+    'inactividad' => env('SESION_INACTIVIDAD_MINUTOS', 60),
 
     /*
     |--------------------------------------------------------------------------

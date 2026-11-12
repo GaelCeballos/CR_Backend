@@ -18,13 +18,14 @@ use Laravel\Sanctum\HasApiTokens;
     'email', 'hashed_password', 'nombre_completo', 'cedula_profesional', 'universidad',
     'rol', 'estado', 'is_temporary_password', 'creado_por',
 ])]
-#[Hidden(['hashed_password', 'remember_token'])]
+#[Hidden(['hashed_password', 'remember_token', 'llave_borrador'])]
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasUuids;
 
     /**
-     * Castea rol/estado a sus enums, is_temporary_password a booleano y ultimo_acceso a fecha.
+     * Castea rol/estado a sus enums, is_temporary_password a booleano, ultimo_acceso a fecha
+     * y cifra llave_borrador.
      *
      * @return array<string, string>
      */
@@ -35,6 +36,8 @@ class User extends Authenticatable
             'estado' => EstadoUsuario::class,
             'is_temporary_password' => 'boolean',
             'ultimo_acceso' => 'datetime',
+            // Cifrada con APP_KEY: un respaldo de la base no basta para leer borradores.
+            'llave_borrador' => 'encrypted',
         ];
     }
 

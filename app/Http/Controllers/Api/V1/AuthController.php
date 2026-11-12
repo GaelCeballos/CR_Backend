@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\SesionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -27,7 +28,7 @@ class AuthController extends Controller
      * @param  LoginRequest  $request  correo, contraseña y perfil elegido ("Ingresar como")
      * @return JsonResponse usuario autenticado, token y ruta de redireccion
      */
-    public function login(LoginRequest $request)
+    public function login(LoginRequest $request, SesionService $sesiones)
     {
         $data = $request->validated();
 
@@ -54,17 +55,12 @@ class AuthController extends Controller
         $usuario->update(['ultimo_acceso' => now()]);
 
         // Si el usuario olvido cerrar sesion en otro equipo, este login invalida ese token.
-        $usuario->tokens()->delete();
-
-        $token = $usuario->createToken(
-            'api',
-            ['*'],
-            now()->addMinutes((int) config('sanctum.expiration')),
-        )->plainTextToken;
+        $token = $sesiones->iniciar($usuario);
 
         return response()->json([
             'user' => new UserResource($usuario),
             'token' => $token,
+            'llave_borrador' => $sesiones->llaveBorrador($usuario),
             'redirect' => $usuario->is_temporary_password ? '/perfil' : '/expedientes',
         ]);
     }
@@ -88,8 +84,25 @@ class AuthController extends Controller
      * @param  Request  $request  peticion autenticada
      * @return JsonResponse datos del usuario actual
      */
-    public function me(Request $request)
+    public function me(Request $request, SesionService $sesiones)
     {
-        return response()->json(['user' => new UserResource($request->user())]);
+        return response()->json([
+            'user' => new UserResource($request->user()),
+            'llave_borrador' => $sesiones->llaveBorrador($request->user()),
+        ]);
+    }
+
+    /**
+     * Get: revision periodica del front. Confirma que la sesion sigue vigente y
+     * dice cuando vence, sin contarse como actividad (no la extiende).
+     *
+     * @param  Request  $request  peticion autenticada
+     * @return JsonResponse { vence_en } en ISO 8601
+     */
+    public function sesion(Request $request, SesionService $sesiones)
+    {
+        return response()->json([
+            'vence_en' => $sesiones->venceEn($request->user()->currentAccessToken())->toIso8601String(),
+        ]);
     }
 }
