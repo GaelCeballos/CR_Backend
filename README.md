@@ -2,14 +2,15 @@
 
 API REST en Laravel para capturar, consultar y administrar las historias clínicas laborales de
 Cruz Roja Mexicana, Delegación Estatal Colima (Coordinación de Servicios Médicos). Sustituye la
-capa simulada (`localStorage`) del frontend `crm-colima-hc` por una base de datos real en
-PostgreSQL, con autenticación por token, control de roles y bitácora de accesos.
+capa simulada (`localStorage`) del frontend `crm-colima` por una base de datos real en
+PostgreSQL, con autenticación por token, control de roles y bitácora de accesos. El frontend vive en el
+repositorio hermano `crm-colima`; su contrato detallado con esta API está en `crm-colima/docs/BACKEND.md`.
 
 ## Stack y versiones
 
 | Componente | Versión |
 |---|---|
-| PHP | 8.4 |
+| PHP | 8.4.27 (fijado en el Dockerfile por CVE-2026-109618 y CVE-2026-109619) |
 | Laravel Framework | 13.35 |
 | PostgreSQL | 16 |
 | Laravel Sanctum (autenticación) | 4.3 |
@@ -20,7 +21,7 @@ PostgreSQL, con autenticación por token, control de roles y bitácora de acceso
 Librerías de Composer relevantes (ver `composer.json` para la lista completa y resolución exacta
 en `composer.lock`):
 
-- `laravel/sanctum` — tokens Bearer de API (sesión única, expiración de 8 horas).
+- `laravel/sanctum` — tokens Bearer de API (sesión única, vence tras 1 hora sin actividad, tope de 8 horas).
 - `laravel/tinker` — consola interactiva para depuración.
 - `laravel/pint` / `phpunit/phpunit` / `mockery/mockery` / `fakerphp/faker` — calidad y pruebas (dev).
 
@@ -33,15 +34,31 @@ dependencia extra es superficie de ataque/configuración adicional en un sistema
   Se usa `DB::statement()` puntual solo para lo que el Schema Builder no expresa: un puñado de
   `check` multi-columna, los índices únicos parciales de `pacientes` (CURP/NSS cuando no son nulos)
   y la vista `medicos_selector` (las vistas nunca se crean con el Schema Builder).
-- **`folio` es una columna *identity* de Postgres** (`generatedAs()->always()`), no una secuencia
-  manual: Postgres la asigna de forma atómica dentro de la misma transacción del alta.
+- **Folio consecutivo por año, no global.** El historial se respalda y se borra cada año, así que un
+  expediente se identifica con `anio` (columna generada a partir de `fecha_estudios`) + `folio_anual`
+  (único por año). La clave de ruta es `{anio}-{folio_anual}`, p. ej. `2026-6`. `FolioAnualService`
+  asigna el número dentro de la transacción del alta con un *advisory lock* por año y, si aun así choca
+  con otro equipo guardando al mismo tiempo, reintenta el alta hasta 3 veces.
+- **`fecha_estudios` la fija el servidor** (hoy, zona México) al crear y no cambia al editar.
+- **Solo tres campos obligatorios en el expediente** (decisión del cliente): nombre completo, CURP **o**
+  NSS y médico dictaminador. El resto es opcional, pero si se envía se valida su formato y catálogo.
+- **Ambos roles ven los expedientes de todos los médicos**; `medico_id` es solo un filtro opcional.
+- **Cierre de año**: el admin descarga (en *stream*) el respaldo completo de un año anterior y, si la
+  descarga llegó entera, esas historias y los pacientes que se quedan sin visitas **se borran**. Es
+  irreversible.
 - **Columnas generadas (*stored*)** para `ta_conjunta`, `imc` y `estado_nutricional`
   (`hc_exploracion`): Postgres las recalcula solas a partir de peso/talla/TA; la aplicación nunca
   las escribe.
 - **Autenticación por token Bearer (Sanctum), no cookies de sesión**, porque frontend y backend
-  corren en orígenes distintos. **Sesión única por usuario**: cada login revoca cualquier token
-  anterior de esa cuenta (si alguien no cerró sesión en otro equipo, el siguiente login la
-  invalida); logout destruye solo el token con el que se hizo la petición.
+  corren en orígenes distintos. **Sesión única por usuario**: cada login deja sin efecto cualquier
+  token anterior de esa cuenta (lo marca como `reemplazada`, para que ese equipo reciba
+  `SESSION_REPLACED`); logout destruye solo el token con el que se hizo la petición. La sesión
+  **vence tras 1 hora sin actividad** (cada petición la extiende; `GET /auth/sesion` no cuenta) y
+  nunca dura más de 8 horas desde el login (`App\Services\SesionService`, middleware
+  `extender-sesion`). Los tokens vencidos hace más de un día se borran en cada login (Render
+  gratuito no ejecuta tareas programadas).
+- **Llave del borrador** (`users.llave_borrador`, cifrada con `APP_KEY`): el login y `/auth/me` la
+  entregan para que el front cifre en el navegador el expediente nuevo que no alcanzó a enviarse.
 - **Hash de contraseñas con Argon2id** (no bcrypt por defecto, no SHA-256 del lado del cliente).
 - **Separación de permisos por middleware**, no solo por UI: `servicios_medicos` únicamente puede
   capturar/editar pacientes y expedientes, y su propio perfil/contraseña. Todo lo demás
@@ -66,14 +83,14 @@ app/
   Enums/            RolUsuario, EstadoUsuario, AccionAuditoria
   Exceptions/        Formato de error único de la API ({ "error": { code, message, fields } })
   Http/
-    Controllers/Api/V1/   Auth, Me, User, Paciente, Expediente, Bitacora, Export
+    Controllers/Api/V1/   Auth, Me, User, Paciente, Expediente, Bitacora, Export, CierreAnio
     Middleware/            EnsureRole, EnsureActiveUser, BlockIfTemporaryPassword
     Requests/              Validación por endpoint (mensajes exactos del frontend original)
     Resources/             Forma pública de usuarios y expedientes
   Models/            User, Paciente, Domicilio, HistoriaClinica, Hc* (módulos clínicos), Auditoria
   Rules/             NombrePersona, CedulaProfesional, PasswordSegura
   Services/          CalculoClinicoService, GradienteService, PasswordGeneratorService,
-                     PacienteUpsertService, ExpedienteBuilder, AuditoriaService
+                     PacienteUpsertService, ExpedienteBuilder, FolioAnualService, AuditoriaService
   Support/           Catálogo de columnas por módulo y sus etiquetas oficiales (para la bitácora)
 database/
   migrations/        Una tabla (o vista) por archivo, en orden de dependencias
@@ -111,7 +128,8 @@ La API queda disponible en `http://localhost:8080/api/v1` (puerto configurable c
 | `DB_HOST` | `db` dentro de Docker; `127.0.0.1` si corres Laravel fuera del contenedor |
 | `APP_TIMEZONE` | `America/Mexico_City` — zona de negocio para fechas y la jornada del Excel |
 | `HASH_DRIVER` | `argon2id` |
-| `SANCTUM_TOKEN_EXPIRATION_MINUTES` | Vida del token Bearer (480 = 8 horas, una jornada) |
+| `SANCTUM_TOKEN_EXPIRATION_MINUTES` | Tope absoluto de una sesión desde el login (480 = 8 horas, una jornada) |
+| `SESION_INACTIVIDAD_MINUTOS` | Minutos sin actividad tras los que vence la sesión (60) |
 | `CORS_ALLOWED_ORIGINS` | Dominio(s) del frontend, separados por coma |
 
 ## Pruebas automatizadas
@@ -131,20 +149,23 @@ cualquier `<env>` de `phpunit.xml` — si corrieras `php artisan test` dentro de
 terminaría borrando la base de datos de **desarrollo** en vez de `cr_backend_testing`. `app_test` es
 el mismo build pero con su propio `APP_ENV`/`DB_DATABASE`, para que esto no pueda pasar por accidente.
 
-29 pruebas de característica cubren: login (orden de validación y mensajes exactos), sesión única,
+40 pruebas de característica cubren: login (orden de validación y mensajes exactos), sesión única,
 salvaguardas de usuarios (nadie se autodesactiva ni se autodegrada; siempre queda ≥1 admin activo),
 alta/edición de expedientes con sus cálculos (edad, IMC, TA conjunta, estado nutricional, folio
-consecutivo), bitácora, y los endpoints de datos para PDF/Excel.
+anual), reintento ante altas simultáneas, campos obligatorios, coma decimal y normalización de zona,
+visibilidad entre médicos, pacientes recurrentes, bitácora, y los endpoints de datos para PDF/Excel.
 
 ## Resumen de endpoints
 
 Base `/api/v1`. Autenticación: `Authorization: Bearer <token>` (se obtiene en `/auth/login`).
+`{clave}` = `{anio}-{folio_anual}` (p. ej. `2026-6`).
 
 | Método y ruta | Rol | Qué hace |
 |---|---|---|
-| `POST /auth/login` | público | Inicia sesión; revoca el token anterior de esa cuenta |
+| `POST /auth/login` | público | Inicia sesión; deja sin efecto el token anterior de esa cuenta; entrega la llave del borrador |
 | `POST /auth/logout` | cualquiera | Revoca el token actual |
-| `GET /auth/me` | cualquiera | Usuario autenticado |
+| `GET /auth/me` | cualquiera | Usuario autenticado y llave del borrador |
+| `GET /auth/sesion` | cualquiera | Revisión periódica: `{ vence_en }`; no extiende la sesión |
 | `PUT /me` | cualquiera | Edita el perfil propio |
 | `POST /me/password` | cualquiera | Cambia la contraseña propia |
 | `GET /users?vista=selector` | cualquiera | Médicos activos para el selector de expedientes |
@@ -155,15 +176,20 @@ Base `/api/v1`. Autenticación: `Authorization: Bearer <token>` (se obtiene en `
 | `POST /users/{id}/reset-password` | admin | Restablece la contraseña de otra cuenta |
 | `GET /pacientes/buscar?q=` | cualquiera | Buscador del encabezado |
 | `GET /pacientes/lookup?curp=&nss=` | cualquiera | Precarga de un paciente recurrente |
-| `GET /expedientes/siguiente-folio` | cualquiera | Folio informativo |
+| `GET /expedientes/siguiente-folio` | cualquiera | Folio informativo (el real se asigna al guardar) |
 | `GET /expedientes` | cualquiera | Navegador de expedientes (filtros y paginación) |
 | `GET /expedientes/estadisticas` | cualquiera | Tarjetas de métricas |
+| `GET /expedientes/empresas` | cualquiera | Empresas capturadas (filtro del Reporte SABI) |
+| `GET /expedientes/zonas` | cualquiera | Zonas de trabajo sugeridas (de fábrica + capturadas) |
 | `POST /expedientes` | cualquiera | Crea un expediente |
-| `GET /expedientes/{folio}` | cualquiera | Abre un expediente (registra "Consulta") |
-| `PUT /expedientes/{folio}` | cualquiera | Edita un expediente (registra "Edición de Expediente") |
+| `GET /expedientes/{clave}` | cualquiera | Abre un expediente (registra "Consulta") |
+| `PUT /expedientes/{clave}` | cualquiera | Edita un expediente (registra "Edición de Expediente") |
 | `GET /bitacora` | admin | Consulta la bitácora |
-| `GET /expedientes/{folio}/pdf?plantilla=PECO\|TX` | admin | Datos del expediente para que el frontend genere el PDF |
-| `GET /export/excel?fecha=` | admin | Datos de la jornada para que el frontend genere el Excel |
+| `GET /expedientes/{clave}/pdf?plantilla=PECO\|TX` | admin | Datos del expediente para que el frontend genere el PDF |
+| `POST /expedientes/{clave}/entrega` | admin | Estampa la fecha de entrega de resultados (hoy) antes de generar el PDF |
+| `GET /export/excel?fecha=` | admin | Datos de la jornada (realizados o editados ese día) para el Excel |
+| `GET /admin/anios/pendientes` | admin | Años anteriores al actual que aún tienen datos |
+| `POST /admin/anios/{anio}/cerrar` | admin | Transmite el respaldo del año y lo **borra** (requiere `{ "confirmar": true }`) |
 
 Formato de error único en toda la API:
 

@@ -4,6 +4,7 @@ use App\Exceptions\ApiExceptionHandler;
 use App\Http\Middleware\BlockIfTemporaryPassword;
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\ExtenderSesion;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
             'active' => EnsureActiveUser::class,
             'no-temp-password' => BlockIfTemporaryPassword::class,
+            'extender-sesion' => ExtenderSesion::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
