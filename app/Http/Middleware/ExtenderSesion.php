@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\PersonalAccessToken;
 use App\Services\SesionService;
 use Closure;
 use Illuminate\Http\Request;
-use Laravel\Sanctum\PersonalAccessToken;
 
 /**
  * Cuenta cada peticion autenticada como actividad y extiende la sesion.
