@@ -24,8 +24,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|string',
-            'password' => 'required|string',
+            'email' => 'required|string|max:255',
+            'password' => 'required|string|max:255',
             'perfil' => 'required|in:admin,servicios_medicos',
         ];
     }
@@ -38,6 +38,8 @@ class LoginRequest extends FormRequest
         return [
             'email.required' => 'Ingresa tu correo y contraseña.',
             'password.required' => 'Ingresa tu correo y contraseña.',
+            'email.max' => 'Correo o contraseña incorrectos.',
+            'password.max' => 'Correo o contraseña incorrectos.',
             'perfil.required' => 'Selecciona el perfil con el que quieres ingresar.',
             'perfil.in' => 'Selecciona el perfil con el que quieres ingresar.',
         ];

@@ -38,11 +38,10 @@ class ChangePasswordRequest extends FormRequest
             ],
             'nueva' => [
                 'required', 'string', new PasswordSegura,
-                function (string $attribute, mixed $value, \Closure $fail) use ($usuario) {
-                    if (Hash::check($value, $usuario->hashed_password)) {
-                        $fail('La nueva contraseña debe ser distinta de la actual.');
-                    }
-                },
+                // Se compara contra lo escrito en "actual", no contra el hash: con
+                // Hash::check este aviso servia para adivinar la contraseña aunque
+                // "actual" fuera incorrecta, y costaba otro hash argon2id por intento.
+                'different:actual',
             ],
         ];
     }
@@ -55,6 +54,7 @@ class ChangePasswordRequest extends FormRequest
         return [
             'actual.required' => 'La contraseña actual no es correcta.',
             'nueva.required' => 'La contraseña debe tener al menos 8 caracteres.',
+            'nueva.different' => 'La nueva contraseña debe ser distinta de la actual.',
         ];
     }
 }
