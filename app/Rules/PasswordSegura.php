@@ -25,6 +25,13 @@ class PasswordSegura implements ValidationRule
             return;
         }
 
+        // Mismo tope que LoginRequest: una contraseña mas larga no podria usarse para entrar.
+        if (strlen($value) > 255) {
+            $fail('La contraseña no puede tener más de 255 caracteres.');
+
+            return;
+        }
+
         if (! preg_match('/[A-Za-z]/', $value) || ! preg_match('/\d/', $value)) {
             $fail('La contraseña debe incluir letras y números.');
         }
