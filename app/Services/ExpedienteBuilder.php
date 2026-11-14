@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\HistoriaClinica;
+use App\Models\Paciente;
 use App\Models\User;
 use App\Support\CamposExpediente;
 use App\Support\EtiquetasCampoExpediente;
@@ -33,12 +34,15 @@ class ExpedienteBuilder
      *
      * @param  array<string, mixed>  $payload  columnas planas enviadas por el cliente
      * @param  User  $usuario  quien esta creando el expediente
-     * @return HistoriaClinica el expediente recien creado, con sus relaciones cargadas
+     * @return array{historia: HistoriaClinica, cambios_paciente: array<int, string>} el expediente recien creado (con sus relaciones) y los datos fijos de un paciente existente que el alta corrigio, para la bitacora
      */
-    public function crear(array $payload, User $usuario): HistoriaClinica
+    public function crear(array $payload, User $usuario): array
     {
         return DB::transaction(function () use ($payload, $usuario) {
             $paciente = $this->pacientes->upsert(Arr::only($payload, CamposExpediente::paciente()));
+            // Se toma antes de cualquier otro guardado del paciente: getChanges solo
+            // conserva el ultimo update().
+            $cambiosPaciente = $this->cambiosDePaciente($paciente);
             $domicilio = $this->pacientes->domicilioVigente($paciente, $this->datosDomicilio($payload));
 
             $fechaEstudios = now('America/Mexico_City')->toDateString();
@@ -54,7 +58,7 @@ class ExpedienteBuilder
 
             $this->guardarModulos($historia, $payload);
 
-            return $historia->load($this->relaciones());
+            return ['historia' => $historia->load($this->relaciones()), 'cambios_paciente' => $cambiosPaciente];
         });
     }
 
@@ -74,10 +78,7 @@ class ExpedienteBuilder
             $antes = $this->instantanea($historia);
 
             $paciente = $historia->paciente;
-            $paciente->update(array_filter(
-                Arr::only($payload, CamposExpediente::paciente()),
-                fn ($valor) => $valor !== null,
-            ));
+            $this->pacientes->actualizarDatosFijos($paciente, Arr::only($payload, CamposExpediente::paciente()));
 
             $domicilio = $this->pacientes->domicilioVigente($paciente, $this->datosDomicilio($payload));
 
@@ -93,6 +94,32 @@ class ExpedienteBuilder
 
             return ['historia' => $historia, 'campos' => $this->etiquetasDeCambios($antes, $despues)];
         });
+    }
+
+    /**
+     * Describe los datos fijos que cambio el ultimo update() de un paciente ya
+     * existente ("etiqueta: «antes» → «despues»"). Sin esto, un alta que corrige
+     * la identidad no dejaba rastro de los valores anteriores en la bitacora.
+     *
+     * @param  Paciente  $paciente  paciente recien pasado por PacienteUpsertService::upsert
+     * @return array<int, string> un texto por dato cambiado; vacio si es nuevo o no cambio nada
+     */
+    private function cambiosDePaciente(Paciente $paciente): array
+    {
+        if ($paciente->wasRecentlyCreated) {
+            return [];
+        }
+
+        $antes = $paciente->getPrevious();
+        $cambios = [];
+
+        foreach (Arr::only($paciente->getChanges(), CamposExpediente::paciente()) as $campo => $nuevo) {
+            // Las fechas llegan crudas ("1990-01-01 00:00:00" contra "1990-01-01"): basta el dia.
+            $formato = fn ($valor) => $valor === null ? 'vacío' : ($campo === 'fecha_nacimiento' ? substr((string) $valor, 0, 10) : (string) $valor);
+            $cambios[] = EtiquetasCampoExpediente::etiqueta($campo).': «'.$formato($antes[$campo] ?? null).'» → «'.$formato($nuevo).'»';
+        }
+
+        return $cambios;
     }
 
     /**

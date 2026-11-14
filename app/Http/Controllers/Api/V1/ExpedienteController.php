@@ -14,6 +14,7 @@ use App\Services\FolioAnualService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -58,10 +59,18 @@ class ExpedienteController extends Controller
     {
         $usuario = $request->user();
         $historia = $this->folios->conReintento(function () use ($request, $usuario) {
-            $historia = $this->builder->crear($request->validated(), $usuario);
+            ['historia' => $historia, 'cambios_paciente' => $cambiosPaciente] = $this->builder->crear($request->validated(), $usuario);
 
             $motivo = $historia->tipo_examen_motivo ?? 'sin motivo capturado';
-            $this->bitacora->registrar($usuario, AccionAuditoria::CreacionDeFolio, $historia, "Nueva historia clinica · {$motivo}");
+            $detalle = "Nueva historia clinica · {$motivo}";
+
+            // Si el alta corrigio datos fijos de un paciente existente, ese cambio
+            // afecta a todos sus expedientes: queda escrito con el valor anterior.
+            if ($cambiosPaciente !== []) {
+                $detalle .= ' · Datos del paciente actualizados: '.implode('; ', $cambiosPaciente);
+            }
+
+            $this->bitacora->registrar($usuario, AccionAuditoria::CreacionDeFolio, $historia, $detalle);
 
             return $historia;
         });
@@ -251,9 +260,15 @@ class ExpedienteController extends Controller
     {
         $usuario = $request->user();
         $historia = $this->resolverHistoria($clave);
-        ['historia' => $historia, 'campos' => $campos] = $this->builder->actualizar($historia, $request->validated(), $usuario);
 
-        $this->bitacora->registrar($usuario, AccionAuditoria::EdicionDeExpediente, $historia, $this->detalleEdicion($campos));
+        // La bitacora va en la misma transaccion que la edicion (como en el alta):
+        // si no se puede registrar, la edicion tampoco se guarda.
+        $historia = DB::transaction(function () use ($historia, $request, $usuario) {
+            ['historia' => $historia, 'campos' => $campos] = $this->builder->actualizar($historia, $request->validated(), $usuario);
+            $this->bitacora->registrar($usuario, AccionAuditoria::EdicionDeExpediente, $historia, $this->detalleEdicion($campos));
+
+            return $historia;
+        });
 
         return response()->json(new ExpedienteResource($historia));
     }
