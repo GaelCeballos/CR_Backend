@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('pacientes/buscar', [PacienteController::class, 'buscar']);
             Route::get('pacientes/lookup', [PacienteController::class, 'lookup']);
+            Route::get('pacientes/identidad', [PacienteController::class, 'identidad']);
 
             Route::get('expedientes/siguiente-folio', [ExpedienteController::class, 'siguienteFolio']);
             Route::get('expedientes/estadisticas', [ExpedienteController::class, 'estadisticas']);
