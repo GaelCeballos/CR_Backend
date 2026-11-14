@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Illuminate\Support\Carbon;
-use Laravel\Sanctum\PersonalAccessToken;
 
 /**
  * Reglas de la sesion (token Bearer de Sanctum):

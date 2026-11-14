@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\PersonalAccessToken;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Token con validacion del id antes de consultar (ver App\Models\PersonalAccessToken).
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
         RateLimiter::for('login', function (Request $request) {
             // Un email que no es texto (p. ej. un arreglo) tronaba aqui con un 500
             // antes de llegar a la validacion: se cuenta como cuenta vacia.
