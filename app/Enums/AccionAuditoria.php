@@ -11,4 +11,7 @@ enum AccionAuditoria: string
     case EdicionDeExpediente = 'Edición de Expediente';
     case Consulta = 'Consulta';
     case ImportacionHistorica = 'Importación Histórica';
+
+    /** Descarga del respaldo anual o borrado definitivo de un año (no es de un folio). */
+    case CierreDeAnio = 'Cierre de Año';
 }
