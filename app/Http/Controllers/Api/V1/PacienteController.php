@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\NotFoundApiException;
 use App\Http\Controllers\Controller;
+use App\Models\HistoriaClinica;
 use App\Models\Paciente;
 use App\Services\CalculoClinicoService;
 use App\Support\CamposExpediente;
@@ -130,6 +131,51 @@ class PacienteController extends Controller
             'ultimo_folio' => $ultimaHistoria?->folio_anual,
             'ultimo_anio' => $ultimaHistoria?->anio,
             'datos' => $datos,
+        ]);
+    }
+
+    /**
+     * Get: dice a que paciente pertenecen una CURP y un NSS, para la ventana de
+     * confirmacion antes de guardar un expediente. Solo identidad y numero de
+     * expedientes, sin datos clinicos: el front avisa si el folio se va a agregar
+     * al historial de otra persona o si la CURP y el NSS son de pacientes
+     * distintos (lo que provoco las fusiones de pacientes de nov-2026).
+     *
+     * @param  Request  $request  curp y/o nss; clave ("{anio}-{folio_anual}") si se esta editando ese expediente
+     * @return JsonResponse por_curp y por_nss (o null) y los expedientes del paciente de la clave
+     */
+    public function identidad(Request $request)
+    {
+        $curp = $this->calculos->claveCurp(is_string($request->query('curp')) ? $request->query('curp') : null);
+        $nss = $this->calculos->claveNss(is_string($request->query('nss')) ? $request->query('nss') : null);
+
+        // Del expediente que se edita solo importa su paciente: para no avisar
+        // "pertenece a otro paciente" cuando la CURP es la suya.
+        $pacienteActual = null;
+        $clave = $request->query('clave');
+        if (is_string($clave) && preg_match('/^(\d{4})-(\d+)$/', $clave, $partes)) {
+            $pacienteActual = HistoriaClinica::where('anio', (int) $partes[1])
+                ->where('folio_anual', (int) $partes[2])
+                ->value('paciente_id');
+        }
+
+        $resumen = function (?Paciente $paciente) use ($pacienteActual): ?array {
+            return $paciente ? [
+                'id' => $paciente->id,
+                'nombre_completo' => $paciente->nombre_completo,
+                'curp' => $paciente->curp,
+                'nss' => $paciente->nss,
+                'expedientes' => $paciente->historias()->count(),
+                'es_este' => $paciente->id === $pacienteActual,
+            ] : null;
+        };
+
+        return response()->json([
+            'por_curp' => $resumen($curp !== null && mb_strlen($curp) === 18 ? Paciente::where('curp', $curp)->first() : null),
+            'por_nss' => $resumen($nss !== null && strlen($nss) === 11 ? Paciente::where('nss', $nss)->first() : null),
+            'expedientes_del_paciente' => $pacienteActual
+                ? HistoriaClinica::where('paciente_id', $pacienteActual)->count()
+                : null,
         ]);
     }
 

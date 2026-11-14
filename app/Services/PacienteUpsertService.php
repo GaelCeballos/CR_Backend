@@ -124,6 +124,12 @@ class PacienteUpsertService
             throw ValidationException::withMessages(['nss' => 'El NSS debe tener 11 dígitos.']);
         }
 
+        // 00000000000, 11111111111…: se usaban como "sin NSS" y juntaban a varias
+        // personas en un mismo paciente. Si no se tiene, el NSS se deja vacio.
+        if ($nss !== null && preg_match('/^(\d)\1{10}$/', $nss)) {
+            throw ValidationException::withMessages(['nss' => 'El NSS no puede tener todos los dígitos iguales. Si no lo tienes, déjalo vacío.']);
+        }
+
         return [$curp, $nss];
     }
 
