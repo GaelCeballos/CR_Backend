@@ -52,11 +52,12 @@ Route::prefix('v1')->group(function () {
                 Route::post('expedientes/{clave}/entrega', [ExpedienteController::class, 'marcarEntrega']);
                 Route::get('export/excel', [ExportController::class, 'excelData']);
 
-                // Cierre y respaldo anual en dos pasos: el admin descarga el
-                // respaldo de un año pendiente y, ya generado el Excel, confirma
-                // el borrado con el total y la huella de esa descarga.
+                // Cierre de año por separado: el admin descarga el respaldo de un
+                // año pendiente (y, ya generado el Excel, confirma que llego); el
+                // borrado es otra accion y exige un respaldo vigente.
                 Route::get('admin/anios/pendientes', [CierreAnioController::class, 'pendientes']);
                 Route::get('admin/anios/{anio}/respaldo', [CierreAnioController::class, 'respaldo'])->whereNumber('anio');
+                Route::post('admin/anios/{anio}/respaldo', [CierreAnioController::class, 'confirmarRespaldo'])->whereNumber('anio');
                 Route::post('admin/anios/{anio}/cerrar', [CierreAnioController::class, 'cerrar'])->whereNumber('anio');
             });
 

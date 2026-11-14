@@ -89,6 +89,11 @@ class ExpedienteBuilder
 
             $this->guardarModulos($historia, $payload);
 
+            // Un cambio solo en un modulo hc_* no toca la historia: sin esto,
+            // updated_at no se moveria y el cierre de año no notaria que el
+            // respaldo ya no esta al dia.
+            $historia->touch();
+
             $historia->refresh()->load($this->relaciones());
             $despues = $this->instantanea($historia);
 

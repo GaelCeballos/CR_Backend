@@ -6,13 +6,15 @@ use App\Enums\AccionAuditoria;
 use App\Models\Auditoria;
 use App\Models\HistoriaClinica;
 use App\Models\Paciente;
+use App\Models\RespaldoAnio;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
  * Regresiones de la auditoria run-1: el cierre de año es el unico borrado irreversible de datos clinicos.
- * Solo cierra años anteriores, borra en un segundo paso con el total y la huella de la descarga,
+ * Solo cierra años anteriores, respaldar y borrar son acciones separadas, borra solo con un respaldo vigente,
  * y deja todo en bitacora.
  */
 class CierreAnioTest extends TestCase
@@ -72,12 +74,29 @@ class CierreAnioTest extends TestCase
      *
      * @return array<string, mixed>
      */
-    private function respaldo(int $anio): array
+    private function descargar(int $anio): array
     {
         $response = $this->actingAsUsuario($this->admin)->get("/api/v1/admin/anios/{$anio}/respaldo");
         $response->assertOk();
 
         return json_decode($response->streamedContent(), true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    /** Descarga y confirma el respaldo, como el front cuando el Excel ya se genero. */
+    private function respaldar(int $anio): void
+    {
+        $datos = $this->descargar($anio);
+
+        $this->actingAsUsuario($this->admin)
+            ->postJson("/api/v1/admin/anios/{$anio}/respaldo", ['total' => $datos['total'], 'huella' => $datos['huella']])
+            ->assertOk();
+    }
+
+    /** Pide el borrado escribiendo la confirmacion. */
+    private function cerrar(int $anio, ?string $confirmacion = null): TestResponse
+    {
+        return $this->actingAsUsuario($this->admin)
+            ->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['confirmacion' => $confirmacion ?? "CERRAR {$anio}"]);
     }
 
     /**
@@ -88,100 +107,115 @@ class CierreAnioTest extends TestCase
         $this->crear(['curp' => self::CURP_A]);
         $anio = now('America/Mexico_City')->year;
 
-        $this->actingAsUsuario($this->admin)
-            ->getJson("/api/v1/admin/anios/{$anio}/respaldo")
-            ->assertStatus(404);
-
-        $this->actingAsUsuario($this->admin)
-            ->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['total' => 1, 'huella' => str_repeat('a', 64)])
-            ->assertStatus(404);
+        $this->actingAsUsuario($this->admin)->getJson("/api/v1/admin/anios/{$anio}/respaldo")->assertStatus(404);
+        $this->cerrar($anio)->assertStatus(404);
 
         $this->assertSame(1, HistoriaClinica::count());
     }
 
     /**
-     * Descargar no debe borrar nada: si el Excel falla, el año sigue intacto. La extraccion masiva queda en bitacora.
+     * Descargar no debe borrar nada: el admin puede solo respaldar. La extraccion masiva queda en bitacora como respaldo, no como cierre.
      */
     public function test_el_respaldo_no_borra_y_queda_en_bitacora(): void
     {
         $anio = $this->dosExpedientesDelAnioPasado();
-        $datos = $this->respaldo($anio);
+        $datos = $this->descargar($anio);
 
         $this->assertSame(2, $datos['total']);
         $this->assertCount(2, $datos['items']);
         $this->assertSame(64, strlen($datos['huella']));
         $this->assertSame(2, HistoriaClinica::count());
-        $this->assertSame(1, Auditoria::where('accion', AccionAuditoria::CierreDeAnio)->count());
+        $this->assertSame(1, Auditoria::where('accion', AccionAuditoria::RespaldoDeAnio)->count());
+        $this->assertSame(0, Auditoria::where('accion', AccionAuditoria::CierreDeAnio)->count());
     }
 
     /**
-     * El contrato anterior ({confirmar:true}) ya no borra.
+     * Sin un respaldo confirmado no se borra: es la unica copia que quedara de ese año.
      */
-    public function test_cerrar_sin_la_huella_de_la_descarga_se_rechaza(): void
+    public function test_cerrar_sin_respaldo_no_borra(): void
     {
         $anio = $this->dosExpedientesDelAnioPasado();
+        $this->descargar($anio);
 
-        $this->actingAsUsuario($this->admin)
-            ->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['confirmar' => true])
-            ->assertStatus(400);
+        $this->cerrar($anio)->assertStatus(409)->assertJsonPath('error.message', "Primero descarga el respaldo de {$anio}: solo se borra un año ya respaldado.");
 
         $this->assertSame(2, HistoriaClinica::count());
     }
 
     /**
-     * Sin la huella real no hay prueba de que el respaldo llego completo.
+     * Escribir el año evita borrar el año equivocado con un clic.
      */
-    public function test_cerrar_con_huella_incorrecta_no_borra(): void
+    public function test_cerrar_exige_escribir_la_confirmacion(): void
     {
         $anio = $this->dosExpedientesDelAnioPasado();
-        $datos = $this->respaldo($anio);
+        $this->respaldar($anio);
+
+        $this->cerrar($anio, 'CERRAR '.($anio - 1))->assertStatus(400)->assertJsonPath('error.fields.confirmacion', "Escribe CERRAR {$anio} para confirmar.");
+        $this->actingAsUsuario($this->admin)->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['confirmar' => true])->assertStatus(400);
+
+        $this->assertSame(2, HistoriaClinica::count());
+    }
+
+    /**
+     * Una huella que no es la del historial actual no prueba que el Excel este completo.
+     */
+    public function test_confirmar_respaldo_con_huella_incorrecta_se_rechaza(): void
+    {
+        $anio = $this->dosExpedientesDelAnioPasado();
+        $this->descargar($anio);
 
         $this->actingAsUsuario($this->admin)
-            ->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['total' => 2, 'huella' => str_repeat('0', 64)])
+            ->postJson("/api/v1/admin/anios/{$anio}/respaldo", ['total' => 2, 'huella' => str_repeat('0', 64)])
             ->assertStatus(409);
 
-        $this->assertSame(2, HistoriaClinica::count());
+        $this->assertSame(0, RespaldoAnio::count());
     }
 
     /**
-     * Una edicion posterior no estaria en el Excel descargado.
+     * Una edicion posterior al respaldo no estaria en el Excel: hay que respaldar otra vez.
      */
-    public function test_si_el_anio_cambio_despues_de_la_descarga_no_borra(): void
+    public function test_si_el_anio_cambio_despues_del_respaldo_no_borra(): void
     {
         $anio = $this->dosExpedientesDelAnioPasado();
-        $datos = $this->respaldo($anio);
+        $this->respaldar($anio);
 
         $this->travel(5)->seconds();
         HistoriaClinica::where('folio_anual', 1)->first()->update(['empresa' => 'EMPRESA EDITADA']);
 
-        $this->actingAsUsuario($this->admin)
-            ->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['total' => $datos['total'], 'huella' => $datos['huella']])
-            ->assertStatus(409);
-
+        $this->actingAsUsuario($this->admin)->getJson('/api/v1/admin/anios/pendientes')
+            ->assertJsonPath('anios.0.respaldo.vigente', false);
+        $this->cerrar($anio)->assertStatus(409);
         $this->assertSame(2, HistoriaClinica::count());
+
+        // Con un respaldo nuevo ya se puede.
+        $this->respaldar($anio);
+        $this->cerrar($anio)->assertOk();
     }
 
     /**
-     * El camino normal: borra el año y sus pacientes sin otras visitas, y deja rastro de quien lo hizo.
+     * El camino normal: respaldar y, otro dia, borrar el año y sus pacientes sin otras visitas, con rastro de quien lo hizo.
      */
-    public function test_cerrar_con_la_huella_de_la_descarga_borra_y_registra(): void
+    public function test_cerrar_con_respaldo_vigente_borra_y_registra(): void
     {
         $anio = $this->dosExpedientesDelAnioPasado();
-        $datos = $this->respaldo($anio);
+        $this->respaldar($anio);
 
-        $response = $this->actingAsUsuario($this->admin)
-            ->postJson("/api/v1/admin/anios/{$anio}/cerrar", ['total' => $datos['total'], 'huella' => $datos['huella']])
+        $this->actingAsUsuario($this->admin)->getJson('/api/v1/admin/anios/pendientes')
+            ->assertJsonPath('anios.0.anio', $anio)
+            ->assertJsonPath('anios.0.total', 2)
+            ->assertJsonPath('anios.0.respaldo.vigente', true);
+
+        $this->travel(1)->days();
+        $this->cerrar($anio)
             ->assertOk()
             ->assertJsonPath('total_borrado', 2)
             ->assertJsonPath('pacientes_borrados', 2);
 
         $this->assertSame(0, HistoriaClinica::count());
         $this->assertSame(0, Paciente::count());
-
-        // Dos eventos: la descarga y el borrado (en la prueba comparten la misma fecha).
-        $detalles = Auditoria::where('accion', AccionAuditoria::CierreDeAnio)->pluck('detalle')->implode(' | ');
-        $this->assertStringContainsString('Descarga del respaldo', $detalles);
-        $this->assertStringContainsString('se borraron 2 expedientes', $detalles);
+        $detalle = Auditoria::where('accion', AccionAuditoria::CierreDeAnio)->sole()->detalle;
+        $this->assertStringContainsString("Se borraron 2 expedientes de {$anio}", $detalle);
+        $this->assertStringContainsString('Respaldo del', $detalle);
     }
 
     /**

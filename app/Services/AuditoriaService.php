@@ -37,21 +37,22 @@ class AuditoriaService
     }
 
     /**
-     * Registra un evento del cierre de año (descarga del respaldo o borrado). No
-     * pertenece a un folio: folio_anual va en 0 y sin paciente, para que el
-     * evento no se confunda con el de un expediente.
+     * Registra un evento de un año completo (respaldo o cierre). No pertenece a
+     * un folio: folio_anual va en 0 y sin paciente, para que el evento no se
+     * confunda con el de un expediente.
      *
      * @param  User  $usuario  admin que realizo la accion
+     * @param  AccionAuditoria  $accion  RespaldoDeAnio o CierreDeAnio
      * @param  int  $anio  año respaldado o cerrado
      * @param  string  $detalle  que se descargo o se borro
      * @return Auditoria el registro de bitacora recien creado
      */
-    public function registrarCierre(User $usuario, int $anio, string $detalle): Auditoria
+    public function registrarAnio(User $usuario, AccionAuditoria $accion, int $anio, string $detalle): Auditoria
     {
         return Auditoria::create([
             'usuario_id' => $usuario->id,
             'usuario_nombre' => $usuario->nombre_completo,
-            'accion' => AccionAuditoria::CierreDeAnio,
+            'accion' => $accion,
             'historia_id' => null,
             'anio' => $anio,
             'folio_anual' => 0,
