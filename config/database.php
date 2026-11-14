@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Los mensajes de QueryException llevan la SQL con '?' en vez de los valores:
+            // sin esto, el log guardaba telefono, CURP y demas datos del paciente (H12).
+            'mask_bindings_in_exception_messages' => true,
         ],
 
         'sqlsrv' => [

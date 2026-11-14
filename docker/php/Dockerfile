@@ -32,6 +32,7 @@ RUN sed -i 's/:80/:${PORT}/g' /etc/apache2/sites-available/000-default.conf
 
 # Copiamos la configuración de opcache
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY docker/php/seguridad.ini /usr/local/etc/php/conf.d/seguridad.ini
 
 # Instalamos Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
