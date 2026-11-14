@@ -32,7 +32,7 @@ Route::prefix('v1')->group(function () {
         Route::get('auth/sesion', [AuthController::class, 'sesion'])->withoutMiddleware('extender-sesion');
 
         Route::put('me', [MeController::class, 'update']);
-        Route::post('me/password', [MeController::class, 'changePassword']);
+        Route::post('me/password', [MeController::class, 'changePassword'])->middleware('throttle:cambio-password');
 
         Route::middleware('no-temp-password')->group(function () {
             // El listado (GET /users) decide internamente si es la vista
@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('pacientes/buscar', [PacienteController::class, 'buscar']);
             Route::get('pacientes/lookup', [PacienteController::class, 'lookup']);
+            Route::get('pacientes/identidad', [PacienteController::class, 'identidad']);
 
             Route::get('expedientes/siguiente-folio', [ExpedienteController::class, 'siguienteFolio']);
             Route::get('expedientes/estadisticas', [ExpedienteController::class, 'estadisticas']);
